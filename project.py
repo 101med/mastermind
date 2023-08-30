@@ -1,5 +1,4 @@
 import curses
-import sys
 import random
 from tabulate import tabulate
 
@@ -10,7 +9,10 @@ ROUNDS = 10
 
 def main() -> None:
     stdscr.clear()
-    ...
+    stdscr.addstr(1, 22, "Help:", curses.A_BOLD)
+    stdscr.addstr(2, 22, "O: Correct n and spot.")
+    stdscr.addstr(3, 22, "X: Correct n, wrong spot.")
+    stdscr.addstr(4, 22, "_: Incorrect number.")
     stdscr.refresh()
 
     start_game()
@@ -33,13 +35,19 @@ def play_game(code: list, data: dict) -> None:
 
     while True:
         BOARD.erase()
+        HINT.erase()
         GUESS.erase()
 
         BOARD.addstr(draw_board(data))
         GUESS.mvwin(current_round + 3, 14)
 
         BOARD.refresh()
+        HINT.refresh()
         GUESS.refresh()
+
+        if current_round >= 9:
+            game_over(won=False, code=code)
+            return
 
         guess = []
         while True:
@@ -63,16 +71,51 @@ def play_game(code: list, data: dict) -> None:
                 GUESS.addstr("".join(map(str, guess)))
                 GUESS.refresh()
             except ValueError as ve:
-                ...
+                guess.clear()
+
+                HINT.erase()
+                GUESS.erase()
+                HINT.addstr(0, 0, "Hint:", curses.A_BOLD)
+                HINT.addstr(1, 0, str(ve))
+                HINT.refresh()
+                GUESS.refresh()
 
         data["pegs"][current_round] = keys_peg(code, guess)
         data["code"][current_round] = "".join(map(str, guess))
 
-        current_round += 1
+        if guess == code:
+            game_over(won=True, r=current_round)
+            return
+        else:
+            current_round += 1
 
 
 def game_over(won=False, code=[1, 2, 3, 4], r=9) -> None:
-    ...
+    HINT.erase()
+    BOARD.bkgd(curses.A_DIM)
+
+    if won:
+        HINT.addstr(0, 0, "Congratulations!", curses.A_BOLD)
+        HINT.addstr(1, 0, f"You won, your score is {ROUNDS - r}/{ROUNDS}.")
+        HINT.chgat(1, 22, 5, curses.A_BOLD)
+    else:
+        HINT.addstr(0, 0, "Oops!", curses.A_BOLD)
+        HINT.addstr(1, 0, f"You lost, the code was {''.join(map(str, code))}.")
+        HINT.chgat(1, 23, 4, curses.A_BOLD)
+
+    HINT.addstr(3, 0, "Press any key to restart, q to quit", curses.A_BLINK)
+
+    BOARD.refresh()
+    HINT.refresh()
+
+    if GUESS.getkey() == "q":
+        stdscr.clear()
+        stdscr.addstr(2, 4, "Goodbye :)")
+        stdscr.refresh()
+        curses.napms(500)
+        exit()
+
+    BOARD.bkgd(curses.A_NORMAL)
 
 
 def keys_peg(code: list, guess: list) -> str:
@@ -96,7 +139,7 @@ def validate_guess(s: list) -> None:
 
     for n in s:
         if not n in range(1, 7):
-            raise ValueError("Use numbers between\n1 and 6.")
+            raise ValueError("Use numbers between 1-6.")
 
     if len(set(s)) != 4:
         raise ValueError("Don't repeat numbers.")
@@ -120,6 +163,7 @@ if __name__ == "__main__":
         curses.curs_set(0)
 
         BOARD = curses.newwin(14, 21, 0, 0)
+        HINT = curses.newwin(4, 40, 6, 22)
         GUESS = curses.newwin(1, 5, 0, 0)
 
         GUESS.keypad(True)
