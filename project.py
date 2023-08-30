@@ -1,3 +1,4 @@
+import argparse
 import curses
 import random
 from tabulate import tabulate
@@ -18,6 +19,11 @@ def main() -> None:
     start_game()
 
 
+def cheat(code: list) -> None:
+    with open("/tmp/mastermind_code.txt", "w") as f:
+        f.write("".join(map(str, code)) + "\n")
+
+
 def start_game() -> None:
     while True:
         code = random.sample(NUMBERS, PEGS)
@@ -26,6 +32,9 @@ def start_game() -> None:
             "pegs": ["...." for _ in range(ROUNDS)],
             "code": ["...." for _ in range(ROUNDS)],
         }
+
+        if CHEATS:
+            cheat(code)
 
         play_game(code, board_data)
 
@@ -45,7 +54,7 @@ def play_game(code: list, data: dict) -> None:
         HINT.refresh()
         GUESS.refresh()
 
-        if current_round >= 9:
+        if current_round >= 10:
             game_over(won=False, code=code)
             return
 
@@ -97,7 +106,7 @@ def game_over(won=False, code=[1, 2, 3, 4], r=9) -> None:
     if won:
         HINT.addstr(0, 0, "Congratulations!", curses.A_BOLD)
         HINT.addstr(1, 0, f"You won, your score is {ROUNDS - r}/{ROUNDS}.")
-        HINT.chgat(1, 22, 5, curses.A_BOLD)
+        HINT.chgat(1, 23, 5, curses.A_BOLD)
     else:
         HINT.addstr(0, 0, "Oops!", curses.A_BOLD)
         HINT.addstr(1, 0, f"You lost, the code was {''.join(map(str, code))}.")
@@ -156,6 +165,15 @@ def draw_board(data: dict) -> str:
 
 if __name__ == "__main__":
     try:
+        parser = argparse.ArgumentParser(description="Curses Mastermind game")
+        parser.add_argument(
+            "-c",
+            "--cheats",
+            action="store_true",
+            help="Enable cheats, and store the code in /tmp/mastermind_code.txt",
+        )
+        args = parser.parse_args()
+
         stdscr = curses.initscr()
 
         curses.noecho()
@@ -168,7 +186,13 @@ if __name__ == "__main__":
 
         GUESS.keypad(True)
 
+        if args.cheats:
+            CHEATS = True
+        else:
+            CHEATS = False
+
         main()
+
     finally:
         if "GUESS" in locals():
             GUESS.keypad(False)
