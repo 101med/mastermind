@@ -1,151 +1,86 @@
-import curses, sys, random
+import curses
+import sys
+import random
 from tabulate import tabulate
-from pyfiglet import Figlet
+
+NUMBERS = range(1, 7)
+PEGS = 4
+ROUNDS = 10
 
 
-def main():
-    play_game()
+def main() -> None:
+    stdscr.clear()
+    ...
+    stdscr.refresh()
+
+    start_game()
 
 
-def play_game() -> None:
-    ROUNDS = 10
-
+def start_game() -> None:
     while True:
-        code = random.sample(range(1, 7), 4)
-        cheat(code)
-        data = {
+        code = random.sample(NUMBERS, PEGS)
+        board_data = {
             "": [f"{r:02}" for r in range(1, ROUNDS + 1)],
             "pegs": ["...." for _ in range(ROUNDS)],
             "code": ["...." for _ in range(ROUNDS)],
         }
 
-        rounds(code, data)
+        play_game(code, board_data)
 
 
-def cheat(code) -> None:
-    with open("/tmp/mastermind.txt", "w") as f:
-        f.write("".join(map(str, code)) + "\n")
+def play_game(code: list, data: dict) -> None:
+    current_round = 0
 
-
-def rounds(code, data) -> None:
-    ROUNDS = 10
-
-    def game_over(win=False) -> None:
-        hint_window.clear()
-        if win:
-            hint_window.addstr(0, 0, "Congratulations!", curses.A_BOLD)
-            hint_window.addstr(1, 0, f"You won, your score is {ROUNDS - r}/{ROUNDS}.")
-        else:
-            hint_window.addstr(0, 0, "Oops!", curses.A_BOLD)
-            hint_window.addstr(
-                1, 0, f"You lost, the code was {''.join(map(str, code))}."
-            )
-            hint_window.chgat(1, 23, 4, curses.A_BOLD)
-
-        hint_window.addstr(4, 0, "Press any key to restart, q to quit", curses.A_BLINK)
-
-        hint_window.noutrefresh()
-
-        curses.doupdate()
-
-        if guess_window.getkey() == "q":
-            stdscr.clear()
-            stdscr.addstr(
-                (curses.LINES - 1) // 2, (curses.COLS - 10) // 2, "Goodbye :)"
-            )
-            stdscr.refresh()
-
-            curses.napms(500)
-            sys.exit()
-
-    stdscr.clear()
-
-    stdscr.addstr(1, 23, "Pegs key:", curses.A_BOLD)
-    stdscr.addstr(2, 23, "O: Correct number and position.")
-    stdscr.addstr(3, 23, "X: Correct number, wrong position.")
-    stdscr.addstr(4, 23, "_: Incorrect number.")
-    stdscr.addstr(6, 23, "Help:", curses.A_BOLD)
-    stdscr.addstr(7, 23, "Return: confirm guess.")
-    stdscr.addstr(8, 23, "q: Restart or quit game.")
-
-    stdscr.noutrefresh()
-
-    r = 0
     while True:
-        board_window.clear()
-        hint_window.clear()
-        guess_window.clear()
+        BOARD.erase()
+        GUESS.erase()
 
-        board_window.addstr(0, 0, draw_board(data))
-        guess_window.mvwin(r + 4, 15)
+        BOARD.addstr(draw_board(data))
+        GUESS.mvwin(current_round + 3, 14)
 
-        board_window.noutrefresh()
-        hint_window.noutrefresh()
-        guess_window.refresh()
-
-        curses.doupdate()
+        BOARD.refresh()
+        GUESS.refresh()
 
         guess = []
         while True:
             try:
-                key = guess_window.getkey()
+                key: str = GUESS.getkey()
 
                 if key.isdecimal() and len(guess) < 4:
                     guess.append(int(key))
-
                 elif key == "KEY_BACKSPACE" and len(guess) > 0:
                     guess.pop()
-
+                elif key == "q":
+                    game_over(won=False, code=code)
+                    return
                 elif key == "\n":
                     validate_guess(guess)
                     break
-
-                elif key == "q":
-                    game_over(win=False)
-                    return
-
                 else:
                     continue
 
-                guess_window.clear()
-                guess_window.addstr("".join(map(str, guess)))
-                guess_window.refresh()
-
+                GUESS.erase()
+                GUESS.addstr("".join(map(str, guess)))
+                GUESS.refresh()
             except ValueError as ve:
-                guess.clear()
+                ...
 
-                hint_window.clear()
-                guess_window.clear()
+        data["pegs"][current_round] = keys_peg(code, guess)
+        data["code"][current_round] = "".join(map(str, guess))
 
-                hint_window.addstr(0, 0, "Hint:", curses.A_BOLD)
-                hint_window.addstr(1, 0, str(ve))
-
-                hint_window.noutrefresh()
-                guess_window.refresh()
-
-                curses.doupdate()
-
-        data["pegs"][r] = key_pegs(code, guess)
-        data["code"][r] = "".join(map(str, guess))
-
-        if code == guess:
-            game_over(win=True)
-            return
-
-        elif r >= 9:
-            game_over(win=False)
-            return
-        else:
-            r += 1
+        current_round += 1
 
 
-def key_pegs(code: list, guess: list) -> str:
-    PEGS = 4
+def game_over(won=False, code=[1, 2, 3, 4], r=9) -> None:
+    ...
+
+
+def keys_peg(code: list, guess: list) -> str:
     pegs = []
-    for i in range(PEGS):
-        if guess[i] == code[i]:
+    for p in range(PEGS):
+        if guess[p] == code[p]:
             pegs.append("O")
-        elif guess[i] in code:
+        elif guess[p] in code:
             pegs.append("X")
         else:
             pegs.append("_")
@@ -155,13 +90,13 @@ def key_pegs(code: list, guess: list) -> str:
     )
 
 
-def validate_guess(s) -> None:
+def validate_guess(s: list) -> None:
     if len(s) != 4:
         raise ValueError("Type in 4 numbers.")
 
     for n in s:
         if not n in range(1, 7):
-            raise ValueError("Use numbers between 1 to 6.")
+            raise ValueError("Use numbers between\n1 and 6.")
 
     if len(set(s)) != 4:
         raise ValueError("Don't repeat numbers.")
@@ -182,22 +117,19 @@ if __name__ == "__main__":
 
         curses.noecho()
         curses.cbreak()
-        # curses.curs_set(0)
+        curses.curs_set(0)
 
-        board_window = stdscr.subwin(15, 21, 1, 1)
-        hint_window = stdscr.subwin(5, 40, 10, 23)
-        guess_window = curses.newwin(1, 5)
+        BOARD = curses.newwin(14, 21, 0, 0)
+        GUESS = curses.newwin(1, 5, 0, 0)
 
-        guess_window.keypad(True)
+        GUESS.keypad(True)
 
         main()
-
     finally:
-        if "guess_window" in locals():
-            guess_window.keypad(False)
+        if "GUESS" in locals():
+            GUESS.keypad(False)
 
         curses.echo()
         curses.nocbreak()
-        # curses.curs_set(1)
-
+        curses.curs_set(1)
         curses.endwin()
