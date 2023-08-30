@@ -1,3 +1,4 @@
+import os
 import argparse
 import curses
 import random
@@ -20,7 +21,9 @@ def main() -> None:
 
 
 def cheat(code: list) -> None:
-    with open("/tmp/mastermind_code.txt", "w") as f:
+    tmpdir = os.environ.get("TMPDIR", "/tmp")
+
+    with open(os.path.join(tmpdir, "mastermind_code.txt"), "w") as f:
         f.write("".join(map(str, code)) + "\n")
 
 
@@ -169,7 +172,7 @@ if __name__ == "__main__":
         "-c",
         "--cheats",
         action="store_true",
-        help="Enable cheats, and store the code in /tmp/mastermind_code.txt",
+        help="Enable cheats (code stored in ${TMPDIR}/mastermind_code.txt)",
     )
     args = parser.parse_args()
 
