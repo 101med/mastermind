@@ -121,10 +121,6 @@ def game_over(won=False, code=[1, 2, 3, 4], r=9) -> None:
     HINT.refresh()
 
     if GUESS.getkey() == "q":
-        stdscr.clear()
-        stdscr.addstr(2, 4, "Goodbye :)")
-        stdscr.refresh()
-        curses.napms(500)
         exit()
 
     BOARD.bkgd(curses.A_NORMAL)
