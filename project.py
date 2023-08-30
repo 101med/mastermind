@@ -164,16 +164,16 @@ def draw_board(data: dict) -> str:
 
 
 if __name__ == "__main__":
-    try:
-        parser = argparse.ArgumentParser(description="Curses Mastermind game")
-        parser.add_argument(
-            "-c",
-            "--cheats",
-            action="store_true",
-            help="Enable cheats, and store the code in /tmp/mastermind_code.txt",
-        )
-        args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Curses Mastermind game")
+    parser.add_argument(
+        "-c",
+        "--cheats",
+        action="store_true",
+        help="Enable cheats, and store the code in /tmp/mastermind_code.txt",
+    )
+    args = parser.parse_args()
 
+    try:
         stdscr = curses.initscr()
 
         curses.noecho()
