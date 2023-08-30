@@ -36,7 +36,7 @@ def start_game() -> None:
             "code": ["...." for _ in range(ROUNDS)],
         }
 
-        if CHEATS:
+        if cheats:
             cheat(code)
 
         play_game(code, board_data)
@@ -190,9 +190,9 @@ if __name__ == "__main__":
         GUESS.keypad(True)
 
         if args.cheats:
-            CHEATS = True
+            cheats = True
         else:
-            CHEATS = False
+            cheats = False
 
         main()
 
