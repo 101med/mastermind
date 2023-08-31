@@ -4,31 +4,16 @@ import curses
 import random
 from tabulate import tabulate
 
-NUMBERS = range(1, 7)
-PEGS = 4
-ROUNDS = 10
-
 
 def main() -> None:
-    stdscr.clear()
-    stdscr.box()
-    # stdscr.addstr(1, 22, "Help:", curses.A_BOLD)
-    # stdscr.addstr(2, 22, "O: Correct n and spot.")
-    # stdscr.addstr(3, 22, "X: Correct n, wrong spot.")
-    # stdscr.addstr(4, 22, "_: Incorrect number.")
-    stdscr.refresh()
-
     start_game()
 
 
-def cheat(code: list) -> None:
-    tmpdir = os.environ.get("TMPDIR", "/tmp")
+def start_game():
+    stdscr.clear()
+    stdscr.box()
+    stdscr.refresh()
 
-    with open(os.path.join(tmpdir, "mastermind_code.txt"), "w") as f:
-        f.write("".join(map(str, code)) + "\n")
-
-
-def start_game() -> None:
     while True:
         code = random.sample(NUMBERS, PEGS)
         board_data = {
@@ -37,127 +22,55 @@ def start_game() -> None:
             "code": ["...." for _ in range(ROUNDS)],
         }
 
-        if cheats:
+        if CHEATS:
             cheat(code)
 
         play_game(code, board_data)
 
 
-def play_game(code: list, data: dict) -> None:
+def play_game(code, data):
     current_round = 0
 
     while True:
+        BOARD.erase()
         HINT.erase()
-        GUESS.erase()
 
+        GUESS.erase()
         GUESS.refresh()
-        GUESS.mvwin(BOARD.getbegyx()[0] + (current_round + 3), BOARD.getbegyx()[1] + 14)
-        display_board(data)
+
+        BOARD.addstr(draw_board(data))
+        GUESS.mvwin(BOARD_BEG_Y + (current_round + 3), BOARD_BEG_X + 14)
+
+        BOARD.refresh()
         HINT.refresh()
+        GUESS.refresh()
 
         if current_round >= 10:
             game_over(won=False, code=code, data=data)
             return
 
-        guess = []
-        while True:
-            try:
-                key: str = GUESS.getkey()
 
-                if key.isdecimal() and len(guess) < 4:
-                    guess.append(int(key))
-                elif key == "KEY_BACKSPACE" and len(guess) > 0:
-                    guess.pop()
-                elif key == "q":
-                    game_over(won=False, code=code, data=data)
-                    return
-                elif key == "\n":
-                    validate_guess(guess)
-                    break
-                else:
-                    continue
-
-                GUESS.erase()
-                GUESS.addstr("".join(map(str, guess)))
-            except ValueError as ve:
-                guess.clear()
-
-                GUESS.erase()
-                display_hint(ve)
-
-        data["pegs"][current_round] = keys_peg(code, guess)
-        data["code"][current_round] = "".join(map(str, guess))
-
-        if guess == code:
-            game_over(won=True, r=current_round, data=data)
-            return
-        else:
-            current_round += 1
+def game_over(
+    code=[1, 2, 3, 4],
+    data={},
+    r=9,
+    won=False,
+) -> None:
+    if won:
+        header = ""
+        message = ""
+    else:
+        header = ""
+        message = ""
 
 
-def display_hint(s) -> None:
-    hint = "Hint:" + " " + str(s)
-    hint_centerd_x = (HINT.getmaxyx()[1] - len(hint)) // 2
-
-    HINT.erase()
-    HINT.addstr(0, hint_centerd_x, hint)
-    HINT.chgat(0, hint_centerd_x, 5, curses.A_BOLD)
-    HINT.refresh()
-
-
-def display_board(data: dict, end=False) -> None:
-    BOARD.erase()
-    BOARD.addstr(
-        tabulate(
-            data,
-            headers="keys",
-            tablefmt="pretty",
-            numalign="center",
-        ),
-        curses.A_NORMAL if not end else curses.A_DIM,
+def draw_board(data: dict) -> str:
+    return tabulate(
+        data,
+        headers="keys",
+        tablefmt="pretty",
+        numalign="center",
     )
-    BOARD.refresh()
-
-
-def game_over(won=False, code=[1, 2, 3, 4], r=9, data={}) -> None:
-    try:
-        if won:
-            header = "Congratulations!"
-            message = f"You won, your score is {ROUNDS - r}/{ROUNDS}."  # 29 cols
-        else:
-            header = "Oops!"
-            message = f"You lost, the code was {''.join(map(str, code))}."  # 28 cols
-    finally:
-        footer = "Press any key to restart, q to quit"
-
-    message_centerd_x = (40 - len(message)) // 2
-
-    HINT.erase()
-
-    display_board(data, end=True)
-
-    HINT.addstr(0, (40 - len(header)) // 2, header, curses.A_BOLD)
-    HINT.addstr(1, message_centerd_x, message)
-    HINT.chgat(
-        1,
-        message_centerd_x + 23,
-        4 if len(message) == 28 else 5,
-        curses.A_BOLD,
-    )
-    HINT.addstr(
-        3,
-        (HINT.getmaxyx()[1] - len(footer)) // 2,
-        footer,
-        curses.A_BLINK,
-    )
-
-    BOARD.refresh()
-    HINT.refresh()
-
-    if GUESS.getkey() == "q":
-        exit()
-
-    BOARD.bkgd(curses.A_NORMAL)
 
 
 def keys_peg(code: list, guess: list) -> str:
@@ -187,40 +100,61 @@ def validate_guess(s: list) -> None:
         raise ValueError("Don't repeat numbers.")
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Curses Mastermind game")
+def cheat(code: list) -> None:
+    tmpdir = os.environ.get("TMPDIR", "/tmp")
+    if os.path.exists(tmpdir):
+        with open(os.path.join(tmpdir, "mastermind_code.txt"), "w") as f:
+            f.write("".join(map(str, code)) + "\n")
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Curses Mastermind game.")
+
     parser.add_argument(
         "-c",
-        "--cheats",
+        "--cheat",
         action="store_true",
-        help="Enable cheats (code stored in ${TMPDIR}/mastermind_code.txt)",
+        help="store the game's code in $TMPDIR/mastermind_code.txt",
     )
-    args = parser.parse_args()
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    NUMBERS = range(1, 7)
+    PEGS = 4
+    ROUNDS = 10
+
+    args = parse_arguments()
 
     try:
         stdscr = curses.initscr()
+        y, x = stdscr.getmaxyx()
+
+        if y < 21 or x < 50:
+            print("Please resize your term to 21x50 or more.")
+            exit(1)
 
         curses.noecho()
         curses.cbreak()
-        # curses.curs_set(0)
+        curses.curs_set(0)
 
-        BOARD = curses.newwin(
-            14, 21, (curses.LINES - (14 + 4)) // 2, (curses.COLS - 21) // 2
-        )
-        HINT = curses.newwin(
-            4, 40, BOARD.getbegyx()[0] + (14 + 1), (curses.COLS - 40) // 2
-        )
-        GUESS = curses.newwin(1, 5, 1, 1)
+        BOARD_Y, BOARD_X = (14, 15)
+        HINT_Y, HINT_X = (4, 40)
+        GUESS_Y, GUESS_X = (1, 5)
+        BOARD_BEG_Y = (y - (BOARD_Y + HINT_Y)) // 2
+        BOARD_BEG_X = (x - (BOARD_X - 1)) // 2
+        HINT_BEG_Y = BOARD_BEG_Y + BOARD_Y
+        HINT_BEG_X = (x - HINT_X) // 2
 
+        BOARD = curses.newwin(BOARD_Y, BOARD_X, BOARD_BEG_Y, BOARD_BEG_X)
+        HINT = curses.newwin(HINT_Y, HINT_X, HINT_BEG_Y, HINT_BEG_X)
+        GUESS = curses.newwin(GUESS_Y, GUESS_X, 1, 1)
         GUESS.keypad(True)
 
-        if args.cheats:
-            cheats = True
-        else:
-            cheats = False
+        CHEATS = True if args.cheats else False
 
         main()
-
     finally:
         if "GUESS" in locals():
             GUESS.keypad(False)
