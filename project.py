@@ -11,10 +11,11 @@ ROUNDS = 10
 
 def main() -> None:
     stdscr.clear()
-    stdscr.addstr(1, 22, "Help:", curses.A_BOLD)
-    stdscr.addstr(2, 22, "O: Correct n and spot.")
-    stdscr.addstr(3, 22, "X: Correct n, wrong spot.")
-    stdscr.addstr(4, 22, "_: Incorrect number.")
+    stdscr.box()
+    # stdscr.addstr(1, 22, "Help:", curses.A_BOLD)
+    # stdscr.addstr(2, 22, "O: Correct n and spot.")
+    # stdscr.addstr(3, 22, "X: Correct n, wrong spot.")
+    # stdscr.addstr(4, 22, "_: Incorrect number.")
     stdscr.refresh()
 
     start_game()
@@ -46,19 +47,16 @@ def play_game(code: list, data: dict) -> None:
     current_round = 0
 
     while True:
-        BOARD.erase()
         HINT.erase()
         GUESS.erase()
 
-        BOARD.addstr(draw_board(data))
-        GUESS.mvwin(current_round + 3, 14)
-
-        BOARD.refresh()
-        HINT.refresh()
         GUESS.refresh()
+        GUESS.mvwin(BOARD.getbegyx()[0] + (current_round + 3), BOARD.getbegyx()[1] + 14)
+        display_board(data)
+        HINT.refresh()
 
         if current_round >= 10:
-            game_over(won=False, code=code)
+            game_over(won=False, code=code, data=data)
             return
 
         guess = []
@@ -71,7 +69,7 @@ def play_game(code: list, data: dict) -> None:
                 elif key == "KEY_BACKSPACE" and len(guess) > 0:
                     guess.pop()
                 elif key == "q":
-                    game_over(won=False, code=code)
+                    game_over(won=False, code=code, data=data)
                     return
                 elif key == "\n":
                     validate_guess(guess)
@@ -81,41 +79,77 @@ def play_game(code: list, data: dict) -> None:
 
                 GUESS.erase()
                 GUESS.addstr("".join(map(str, guess)))
-                GUESS.refresh()
             except ValueError as ve:
                 guess.clear()
 
-                HINT.erase()
                 GUESS.erase()
-                HINT.addstr(0, 0, "Hint:", curses.A_BOLD)
-                HINT.addstr(1, 0, str(ve))
-                HINT.refresh()
-                GUESS.refresh()
+                display_hint(ve)
 
         data["pegs"][current_round] = keys_peg(code, guess)
         data["code"][current_round] = "".join(map(str, guess))
 
         if guess == code:
-            game_over(won=True, r=current_round)
+            game_over(won=True, r=current_round, data=data)
             return
         else:
             current_round += 1
 
 
-def game_over(won=False, code=[1, 2, 3, 4], r=9) -> None:
+def display_hint(s) -> None:
+    hint = "Hint:" + " " + str(s)
+    hint_centerd_x = (HINT.getmaxyx()[1] - len(hint)) // 2
+
     HINT.erase()
-    BOARD.bkgd(curses.A_DIM)
+    HINT.addstr(0, hint_centerd_x, hint)
+    HINT.chgat(0, hint_centerd_x, 5, curses.A_BOLD)
+    HINT.refresh()
 
-    if won:
-        HINT.addstr(0, 0, "Congratulations!", curses.A_BOLD)
-        HINT.addstr(1, 0, f"You won, your score is {ROUNDS - r}/{ROUNDS}.")
-        HINT.chgat(1, 23, 5, curses.A_BOLD)
-    else:
-        HINT.addstr(0, 0, "Oops!", curses.A_BOLD)
-        HINT.addstr(1, 0, f"You lost, the code was {''.join(map(str, code))}.")
-        HINT.chgat(1, 23, 4, curses.A_BOLD)
 
-    HINT.addstr(3, 0, "Press any key to restart, q to quit", curses.A_BLINK)
+def display_board(data: dict, end=False) -> None:
+    BOARD.erase()
+    BOARD.addstr(
+        tabulate(
+            data,
+            headers="keys",
+            tablefmt="pretty",
+            numalign="center",
+        ),
+        curses.A_NORMAL if not end else curses.A_DIM,
+    )
+    BOARD.refresh()
+
+
+def game_over(won=False, code=[1, 2, 3, 4], r=9, data={}) -> None:
+    try:
+        if won:
+            header = "Congratulations!"
+            message = f"You won, your score is {ROUNDS - r}/{ROUNDS}."  # 29 cols
+        else:
+            header = "Oops!"
+            message = f"You lost, the code was {''.join(map(str, code))}."  # 28 cols
+    finally:
+        footer = "Press any key to restart, q to quit"
+
+    message_centerd_x = (40 - len(message)) // 2
+
+    HINT.erase()
+
+    display_board(data, end=True)
+
+    HINT.addstr(0, (40 - len(header)) // 2, header, curses.A_BOLD)
+    HINT.addstr(1, message_centerd_x, message)
+    HINT.chgat(
+        1,
+        message_centerd_x + 23,
+        4 if len(message) == 28 else 5,
+        curses.A_BOLD,
+    )
+    HINT.addstr(
+        3,
+        (HINT.getmaxyx()[1] - len(footer)) // 2,
+        footer,
+        curses.A_BLINK,
+    )
 
     BOARD.refresh()
     HINT.refresh()
@@ -153,15 +187,6 @@ def validate_guess(s: list) -> None:
         raise ValueError("Don't repeat numbers.")
 
 
-def draw_board(data: dict) -> str:
-    return tabulate(
-        data,
-        headers="keys",
-        tablefmt="pretty",
-        numalign="center",
-    )
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Curses Mastermind game")
     parser.add_argument(
@@ -177,11 +202,15 @@ if __name__ == "__main__":
 
         curses.noecho()
         curses.cbreak()
-        curses.curs_set(0)
+        # curses.curs_set(0)
 
-        BOARD = curses.newwin(14, 21, 0, 0)
-        HINT = curses.newwin(4, 40, 6, 22)
-        GUESS = curses.newwin(1, 5, 0, 0)
+        BOARD = curses.newwin(
+            14, 21, (curses.LINES - (14 + 4)) // 2, (curses.COLS - 21) // 2
+        )
+        HINT = curses.newwin(
+            4, 40, BOARD.getbegyx()[0] + (14 + 1), (curses.COLS - 40) // 2
+        )
+        GUESS = curses.newwin(1, 5, 1, 1)
 
         GUESS.keypad(True)
 
