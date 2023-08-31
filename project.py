@@ -36,18 +36,57 @@ def play_game(code, data):
         HINT.erase()
 
         GUESS.erase()
-        GUESS.refresh()
+        GUESS.noutrefresh()
+        GUESS.mvwin(BOARD_BEG_Y + (current_round + 3), BOARD_BEG_X + 14)
 
         BOARD.addstr(draw_board(data))
-        GUESS.mvwin(BOARD_BEG_Y + (current_round + 3), BOARD_BEG_X + 14)
 
         BOARD.refresh()
         HINT.refresh()
-        GUESS.refresh()
 
         if current_round >= 10:
-            game_over(won=False, code=code, data=data)
+            game_over(...)
             return
+
+        guess = []
+        while True:
+            try:
+                key: str = GUESS.getkey()
+
+                if key.isdecimal() and len(guess) < 4:
+                    guess.append(int(key))
+                    GUESS.addch(key)
+
+                elif key in ("KEY_BACKSPACE", "\x7f") and len(guess) > 0:
+                    guess.pop()
+                    GUESS.delch(0, len(guess))
+
+                elif key == "q":
+                    game_over(...)
+                    return
+
+                elif key == "\n":
+                    validate_guess(guess)
+                    break
+
+                else:
+                    continue
+
+                GUESS.refresh()
+            except ValueError as ve:
+                guess.clear()
+
+                GUESS.erase()
+                display_hint(ve)
+
+        data["pegs"][current_round] = keys_peg(code, guess)
+        data["code"][current_round] = "".join(map(str, guess))
+
+        if guess == code:
+            game_over(...)
+            return
+        else:
+            current_round += 1
 
 
 def game_over(
@@ -100,6 +139,16 @@ def validate_guess(s: list) -> None:
         raise ValueError("Don't repeat numbers.")
 
 
+def display_hint(s: ValueError) -> None:
+    hint = "Hint:" + " " + str(s)
+    hx = (HINT_Y - len(hint)) // 2
+
+    HINT.erase()
+    HINT.addstr(0, hx, hint)
+    HINT.chgat(0, hx, 5, curses.A_BOLD)
+    HINT.refresh()
+
+
 def cheat(code: list) -> None:
     tmpdir = os.environ.get("TMPDIR", "/tmp")
     if os.path.exists(tmpdir):
@@ -139,7 +188,7 @@ if __name__ == "__main__":
         curses.cbreak()
         curses.curs_set(0)
 
-        BOARD_Y, BOARD_X = (14, 15)
+        BOARD_Y, BOARD_X = (14, 21)
         HINT_Y, HINT_X = (4, 40)
         GUESS_Y, GUESS_X = (1, 5)
         BOARD_BEG_Y = (y - (BOARD_Y + HINT_Y)) // 2
@@ -152,7 +201,7 @@ if __name__ == "__main__":
         GUESS = curses.newwin(GUESS_Y, GUESS_X, 1, 1)
         GUESS.keypad(True)
 
-        CHEATS = True if args.cheats else False
+        CHEATS = True if args.cheat else False
 
         main()
     finally:
