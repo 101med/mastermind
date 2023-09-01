@@ -133,7 +133,7 @@ def game_over(board, won=False) -> None:
     HINT.refresh()
 
     if GUESS.getkey() == "q":
-        exit()
+        exit(0)
 
 
 def draw_board(data: dict[tuple, list]) -> str:
@@ -195,6 +195,10 @@ if __name__ == "__main__":
     args = arg_parse()
     try:
         stdscr = curses.initscr()
+
+        if curses.LINES < 21 or curses.COLS < 50:
+            print("Resize your terminal to play the game (21x50 or more)")
+            exit(1)
 
         curses.noecho()
         curses.cbreak()
