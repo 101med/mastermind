@@ -47,21 +47,7 @@ class Board:
         return self._rounds
 
     def __key_pegs(self, guess) -> str:
-        """
-        Calculate the key pegs for a given guess.
-
-        Returns:
-            str: Key pegs:
-                - "O": correct number and spot.
-                - "X": correct number wrong spot.
-                - "_": Invalid number.
-
-        Example:
-            code: [1,2,3,4]
-            guess: [4,6,3,1]
-            output: "OXX_"
-
-        """
+        """Calculate the key pegs for a given guess."""
         pegs = [
             "O" if guess[n] == self._code[n] else "X" if guess[n] in self._code else "_"
             for n in range(PEGS)
@@ -78,15 +64,7 @@ class Board:
 
     @current_guess.setter
     def current_guess(self, s: str) -> None:
-        """
-        Set the current player's guess for the current round.
-
-        Args:
-            s (str): A string representing the player's guess.
-
-        Raises:
-            ValueError: If the guess is not valid.
-        """
+        """Set the current player's guess for the current round."""
         guess = [int(n) for n in s if n.isdecimal()]
 
         if len(guess) != len(s):
