@@ -49,7 +49,18 @@ class Board:
     def __key_pegs(self, guess) -> str:
         """
         Calculate the key pegs for a given guess.
-        ...
+
+        Returns:
+            str: Key pegs:
+                - "O": correct number and spot.
+                - "X": correct number wrong spot.
+                - "_": Invalid number.
+
+        Example:
+            code: [1,2,3,4]
+            guess: [4,6,3,1]
+            output: "OXX_"
+
         """
         pegs = [
             "O" if guess[n] == self._code[n] else "X" if guess[n] in self._code else "_"
