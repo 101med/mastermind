@@ -2,6 +2,8 @@
 
 An implementation of the classic Mastermind game using Python curses.
 
+![Screenshot](https://github.com/101med/mastermind/raw/main/preview.jpg)
+
 - [Mastermind Game](#mastermind-game)
 - [Features](#features)
 - [Getting Started](#getting-started)
@@ -32,7 +34,12 @@ Before you begin, ensure you have the following prerequisites installed:
    git clone https://github.com/101med/mastermind
    cd mastermind/
    pip install -r requirements.txt
-   ./project.py```
+   ./project.py
+   ```
+During the game, you can use the following keybindings:
+- 0-9: Enter a combination of four unique numbers for your guess.
+- Enter: Submit your guess for the current round.
+- q: Quit the game at any time.
 
 ## Game Rules
 
