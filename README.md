@@ -2,7 +2,6 @@
 
 An implementation of the classic Mastermind game using Python curses.
 
-![Image Description](preview.jpg)
 <img src="preview.jpg" width="300" height="300">
 
 - [Mastermind Game](#mastermind-game)
