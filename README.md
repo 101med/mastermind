@@ -2,7 +2,8 @@
 
 An implementation of the classic Mastermind game using Python curses.
 
-![Screenshot](https://github.com/101med/mastermind/raw/main/preview.jpg)
+![Image Description](preview.jpg)
+<img src="preview.jpg" width="300" height="300">
 
 - [Mastermind Game](#mastermind-game)
 - [Features](#features)
