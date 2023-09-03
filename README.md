@@ -72,7 +72,7 @@ Now that you understand the rules, launch the game and test your code-breaking s
 
 ## Background
 
-This Mastermind Game project is part of the final submission for CS50's Introduction to Computer Science course at Harvard University. It serves as a culmination of the skills and knowledge acquired throughout the course.
+This Mastermind Game project is part of the final submission for CS50P a course at Harvard University. It serves as a culmination of the skills and knowledge acquired throughout the course.
 
 ### What I Learned
 
@@ -84,6 +84,4 @@ While working on this project, I had the opportunity to:
 
 - **Practice Problem Solving**: Developing the game's logic and implementing the rules challenged me to think critically and practice problem-solving techniques.
 
-- **Version Control with Git**: I gained experience in using Git and GitHub for version control, collaboration, and project management.
-
-This project allowed me to combine my programming skills with creative problem-solving to bring a classic game to life in a terminal environment. I hope you enjoy playing the Mastermind Game as much as I enjoyed creating it!
+This project allowed me to combine my programming skills with creative problem-solving to bring a classic game to life in a terminal environment. I hope you enjoy playing the Mastermind Game as much as I enjoyed creating it! This was CS50P for me.
