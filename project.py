@@ -1,6 +1,8 @@
-import os
+#!/usr/bin/env python3
+
 import argparse
 import curses
+import os
 import random
 from tabulate import tabulate
 
@@ -10,31 +12,129 @@ ROUNDS = 10
 
 
 class Board:
+    """Represents the game board for a Mastermind-style game."""
+
     def __init__(self) -> None:
-        self.code = random.sample(NUMBERS, PEGS)
-        self.round = 0
-        self.rounds = tuple(f"{r:02}" for r in range(1, ROUNDS + 1))
-        self.pegs = ["...." for _ in range(ROUNDS)]
-        self.guesses = ["...." for _ in range(ROUNDS)]
-        self.data = {
-            "": self.rounds,
-            "pegs": self.pegs,
-            "code": self.guesses,
-        }
+        """Initialize the game board."""
+        self.reset()
+
+    def reset(self) -> None:
+        """Reset board's values to start a new game."""
+        self._code = random.sample(NUMBERS, PEGS)
+        self._rounds = tuple(f"{r:02}" for r in range(1, ROUNDS + 1))
+        self._pegs = ["...."] * ROUNDS
+        self._guesses = ["...."] * ROUNDS
+        self._round = 0
+
+    @property
+    def code(self) -> list[int]:
+        """Get the secret code as a list of integers."""
+        return self._code
+
+    @property
+    def pegs(self) -> list[str]:
+        """Get the list of feedback pegs for each round."""
+        return self._pegs
+
+    @property
+    def guesses(self) -> list[str]:
+        """Get the list of player guesses for each round."""
+        return self._guesses
+
+    @property
+    def round(self) -> int:
+        """Get the current round number."""
+        return self._round
+
+    @property
+    def rounds(self) -> tuple[str]:
+        """Get the formatted round numbers as a tuple of strings."""
+        return self._rounds
+
+    def __key_pegs(self, guess) -> str:
+        """Calculate the key pegs for a given guess."""
+        pegs = [
+            "O" if guess[n] == self._code[n] else "X" if guess[n] in self._code else "_"
+            for n in range(PEGS)
+        ]
+
+        pegs.sort(key=lambda peg: ("O" not in peg, "X" not in peg, peg))
+
+        return "".join(pegs)
+
+    @property
+    def current_guess(self) -> str:
+        """Get the current player's guess for the current round."""
+        return self._guesses[self._round]
+
+    @current_guess.setter
+    def current_guess(self, s: list[int]) -> None:
+        """Set the current player's guess for the current round."""
+
+        if len(s) != PEGS:
+            raise ValueError("Enter exactly 4 numbers.")
+
+        for n in s:
+            if n not in NUMBERS:
+                raise ValueError("Use numbers between 1 and 6.")
+
+        if len(set(s)) != PEGS:
+            raise ValueError("Do not repeat numbers.")
+
+        self._guesses[self.round] = "".join(map(str, s))
+        self._pegs[self.round] = self.__key_pegs(s)
+
+    def next_round(self) -> None:
+        """Move to the next round of the game if available."""
+        if self._round < 9:
+            self._round += 1
+        else:
+            raise Exception("Game Over.")
+
+    def draw(self) -> str:
+        """
+        Generate a formatted representation of the game board.
+
+        Returns:
+            +----+------+------+
+            |    | pegs | code |
+            +----+------+------+
+            | 01 | .... | .... |
+            | 02 | .... | .... |
+            | 03 | .... | .... |
+            | 04 | .... | .... |
+            | 05 | .... | .... |
+            | 06 | .... | .... |
+            | 07 | .... | .... |
+            | 08 | .... | .... |
+            | 09 | .... | .... |
+            | 10 | .... | .... |
+            +----+------+------+
+        """
+        return tabulate(
+            {
+                "": self._rounds,
+                "pegs": self._pegs,
+                "code": self._guesses,
+            },
+            headers="keys",
+            tablefmt="pretty",
+            numalign="center",
+        )
 
 
 def main() -> None:
-    start_game()
-
-
-def start_game() -> None:
     stdscr.clear()
     stdscr.box()
     stdscr.refresh()
 
-    while True:
-        board = Board()
+    start_game()
 
+
+def start_game() -> None:
+    board = Board()
+
+    while True:
         if CHEATS:
             cheat(board.code)
 
@@ -42,88 +142,81 @@ def start_game() -> None:
 
 
 def play_game(board) -> None:
+    """Play rounds of the game until a player wins, quits, or the game is completed."""
     while True:
-        if board.round == 10:
+        try:
+            BOARD.erase()
+            HINT.erase()
+            GUESS.erase()
+
+            BOARD.addstr(board.draw())
+            GUESS.noutrefresh()
+            GUESS.mvwin(BOARD_BEG_Y + (board.round + 3), BOARD_BEG_X + 14)
+
+            BOARD.refresh()
+            HINT.refresh()
+
+            while True:
+                try:
+                    board.current_guess = make_guess()
+                    break
+                except ValueError as ve:
+                    display_hint(ve)
+
+            if board.current_guess == board.code:
+                game_over(board, won=True)
+                return
+            else:
+                board.next_round()
+
+        except Exception:
             game_over(board, won=False)
             return
 
-        BOARD.erase()
-        HINT.erase()
-        GUESS.erase()
 
-        BOARD.addstr(draw_board(board.data))
+def make_guess() -> list[int]:
+    guess = []
+    while True:
+        key = GUESS.getkey()
 
-        GUESS.noutrefresh()
-        GUESS.mvwin(BOARD_BEG_Y + (board.round + 3), BOARD_BEG_X + 14)
+        if key.isdecimal() and len(guess) < 4:
+            guess.append(int(key))
+            GUESS.addch(key)
 
-        BOARD.refresh()
-        HINT.refresh()
+        elif key in ("KEY_BACKSPACE", "\x7f") and len(guess) > 0:
+            guess.pop()
+            GUESS.delch(0, len(guess))
+        elif key == "q":
+            raise Exception("Game over")
 
-        guess = []
-        while True:
-            try:
-                key: str = GUESS.getkey()
+        elif key == "\n":
+            return guess
 
-                if key.isdecimal() and len(guess) < 4:
-                    guess.append(int(key))
-                    GUESS.addch(key)
-
-                elif key in ("KEY_BACKSPACE", "\x7f") and len(guess) > 0:
-                    guess.pop()
-                    GUESS.delch(0, len(guess))
-
-                elif key == "q":
-                    game_over(board, won=False)
-                    return
-
-                elif key == "\n":
-                    validate_guess(guess)
-                    break
-
-                else:
-                    continue
-
-            except ValueError as ve:
-                guess.clear()
-
-                hint = "Hint:" + " " + str(ve)
-                x = (HINT_X - len(hint)) // 2
-
-                GUESS.erase()
-                HINT.erase()
-
-                HINT.addstr(0, x, hint)
-                HINT.chgat(0, x, 5, curses.A_BOLD)
-
-                HINT.refresh()
-
-        board.pegs[board.round] = keys_peg(board.code, guess)
-        board.guesses[board.round] = "".join(map(str, guess))
-
-        if guess == board.code:
-            game_over(board, won=True)
-            return
-
-        board.round += 1
+        else:
+            continue
 
 
 def game_over(board, won=False) -> None:
-    if won:
-        header = "Congratulations!"
-        message = (
-            f"You won, your score is {(ROUNDS - board.round):02}/{ROUNDS}."  # 29 cols
-        )
-    else:
-        header = "Oops!"
-        message = f"You lost, the code was {''.join(map(str, board.code))}."  # 28 cols
+    try:
+        if won:
+            header, message = (
+                "Congratulations!",
+                f"You won, your score is {(ROUNDS - board.round):02}/{ROUNDS}.",  # 29 cols
+            )
+        else:
+            header, message = (
+                "Oops!",
+                f"You lost, the code was {''.join(map(str, board.code))}.",  # 28 cols
+            )
+    finally:
+        footer = "Press any key to restart, q to quit"
 
-    footer = "Press any key to restart, q to quit"
     x = (HINT_X - len(message)) // 2
 
     BOARD.erase()
     HINT.erase()
 
-    BOARD.addstr(draw_board(board.data), curses.A_DIM)
+    BOARD.addstr(board.draw(), curses.A_DIM)
     HINT.addstr(0, (HINT_X - len(header)) // 2, header, curses.A_BOLD)
     HINT.addstr(1, x, message)
     HINT.chgat(1, x + 23, 4 if len(message) == 28 else 5, curses.A_BOLD)
@@ -135,51 +228,30 @@ def game_over(board, won=False) -> None:
     if GUESS.getkey() == "q":
         exit(0)
 
-
-def draw_board(data: dict[tuple, list]) -> str:
-    return tabulate(
-        data,
-        headers="keys",
-        tablefmt="pretty",
-        numalign="center",
-    )
+    board.reset()
 
 
-def keys_peg(code: list[int], guess: list[int]) -> str:
-    pegs = []
-    for p in range(PEGS):
-        if guess[p] == code[p]:
-            pegs.append("O")
-        elif guess[p] in code:
-            pegs.append("X")
-        else:
-            pegs.append("_")
+def display_hint(s: ValueError) -> None:
+    hint = "{} {}".format("Hint:", str(s))
+    x = (HINT_X - len(hint)) // 2
+    GUESS.erase()
+    HINT.erase()
 
-    return "".join(
-        sorted(pegs, key=lambda item: ("O" not in item, "X" not in item, item))
-    )
+    HINT.addstr(0, x, hint)
+    HINT.chgat(0, x, 5, curses.A_BOLD)
+
+    HINT.refresh()
 
 
-def validate_guess(s: list[int]) -> None:
-    if len(s) != 4:
-        raise ValueError("Type in 4 numbers.")
+def cheat(code: list[int]) -> None:
+    tmpfile = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
 
-    for n in s:
-        if not n in range(1, 7):
-            raise ValueError("Use numbers between 1-6.")
-
-    if len(set(s)) != 4:
-        raise ValueError("Don't repeat numbers.")
-
-
-def cheat(code: list) -> None:
-    file = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
-
-    with open(file, "w") as f:
+    with open(tmpfile, "w") as f:
         f.write("".join(map(str, code)) + "\n")
 
 
 def arg_parse() -> argparse.Namespace:
+    """Parse command line arguments."""
     p = argparse.ArgumentParser()
     p.add_argument(
         "-c",
@@ -209,7 +281,7 @@ if __name__ == "__main__":
         GUESS_Y, GUESS_X = (1, 5)
 
         BOARD_BEG_Y = (curses.LINES - (BOARD_Y + HINT_Y)) // 2
-        BOARD_BEG_X = (curses.COLS - 21) // 2
+        BOARD_BEG_X = (curses.COLS - 21 + 1) // 2
         HINT_BEG_Y = BOARD_BEG_Y + BOARD_Y + 1
         HINT_BEG_X = (curses.COLS - HINT_X) // 2
 
@@ -227,6 +299,9 @@ if __name__ == "__main__":
         main()
 
     finally:
+        if "GUESS" in locals():
+            GUESS.keypad(False)
+
         curses.echo()
         curses.nocbreak()
         curses.curs_set(1)
