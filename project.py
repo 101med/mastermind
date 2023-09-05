@@ -6,10 +6,6 @@ import os
 import random
 from tabulate import tabulate
 
-BOARD_Y, BOARD_X = (14, 21)
-HINT_Y, HINT_X = (4, 40)
-INPUT_Y, INPUT_X = (1, 5)
-
 
 class GameOver(Exception):
     pass
@@ -41,7 +37,7 @@ class Board:
 
     @code.setter
     def code(self, code):
-        self.validate_code(code)
+        self.__validate_code(code)
 
         self._code = code
 
@@ -51,10 +47,10 @@ class Board:
 
     @current_guess.setter
     def current_guess(self, guess: list[int]) -> None:
-        self.validate_code(guess)
+        self.__validate_code(guess)
 
         self._code_pegs.append("".join(map(str, guess)))
-        self._feedback_pegs.append("".join(self.feedback(guess)))
+        self._feedback_pegs.append("".join(self.__feedback(guess)))
 
         if guess == self._code:
             self.player_won = True
@@ -66,8 +62,8 @@ class Board:
         else:
             raise GameOver
 
-    def feedback(self, code: list[int]) -> list[str]:
-        self.validate_code(code)
+    def __feedback(self, code: list[int]) -> list[str]:
+        self.__validate_code(code)
 
         feedback_pegs = []
         try:
@@ -86,7 +82,7 @@ class Board:
         return feedback_pegs
 
     @property
-    def data(self) -> dict:
+    def __data(self) -> dict:
         return {
             "": self._rounds,
             "code": self._code_pegs + ["...."] * (self.ROUNDS - len(self._code_pegs)),
@@ -96,13 +92,13 @@ class Board:
 
     def draw(self) -> str:
         return tabulate(
-            self.data,
+            self.__data,
             headers="keys",
             tablefmt="pretty",
             numalign="center",
         )
 
-    def validate_code(self, code: list[int]) -> None:
+    def __validate_code(self, code: list[int]) -> None:
         if len(code) != self.PEGS:
             raise InvalidGuess(f"Enter exactly {self.PEGS} numbers.")
 
@@ -135,6 +131,10 @@ def main() -> None:
         curses.cbreak()
         curses.curs_set(0)
 
+        BOARD_Y, BOARD_X = (14, 21)
+        HINT_Y, HINT_X = (4, 40)
+        INPUT_Y, INPUT_X = (1, 5)
+
         BOARD_BEG_Y = (curses.LINES - (BOARD_Y + HINT_Y)) // 2
         BOARD_BEG_X = (curses.COLS - 21 + 1) // 2
         HINT_BEG_Y = BOARD_BEG_Y + BOARD_Y + 1
@@ -155,6 +155,7 @@ def main() -> None:
             input_window,
             BOARD_BEG_Y,
             BOARD_BEG_X,
+            HINT_X,
             CHEAT,
         )
 
@@ -175,6 +176,7 @@ def play_game(
     input_window: curses.window,
     BOARD_BEG_Y: int,
     BOARD_BEG_X: int,
+    HINT_X: int,
     CHEAT: bool,
 ) -> None:
     board = Board()
@@ -220,6 +222,7 @@ def play_game(
                     board_window,
                     hint_window,
                     input_window,
+                    HINT_X,
                 )
                 break
 
@@ -254,6 +257,7 @@ def game_over(
     board_window: curses.window,
     hint_window: curses.window,
     input_window: curses.window,
+    HINT_X: int,
 ) -> None:
     if board.player_won:
         header = "Congratulations!"
