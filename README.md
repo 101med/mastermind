@@ -2,7 +2,8 @@
 
 #### Video Demo:  [Demo Video](https://youtube.com/)
 
-#### Description: Mastermind Game in Python's Curses
+#### Description:
+Mastermind Game in Python's Curses
 
 ## Table of Contents
 - [Description](#description)
@@ -90,10 +91,12 @@ This will install the necessary libraries (`tabulate`), to run the game.
 
 ### Play The Game
 
-To play the game:
+To play the game, follow these steps:
 
 1. Launch the game using the provided Python script.
-2. Enter a 4-digit code using numbers from 1 to 6.
+2. Enter a 4-digit code using numbers from 1 to 6. (You can use any 10-base numbers, but numbers greater than 6 are considered invalid.)
+
+Note: You can press **q** at any time to stop the game and reveal the code. Press any other key to restart a new game with a new code, or press **q** again to quit.
 
 #### Feedback Pegs
 
@@ -125,9 +128,7 @@ You can enable cheats using the following command:
 ./project.py -c
 ```
 
-Enabling this option reveals the secret code, stored in `$TMPDIR/mastermind_code.txt` (where `$TMPDIR` could be `/tmp` or your system's designated directory). This allows you to experiment freely with full knowledge of the secret code.
-
-These cheat options can enhance your understanding of the game's mechanics and help you develop advanced strategies. Enjoy mastering the game with these additional features!
+Enabling this option reveals the secret code, stored in `$TMPDIR/mastermind_code.txt` (where `$TMPDIR` could be `/tmp` or your system's designated directory).
 
 ## Key Takeaways
 
