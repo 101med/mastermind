@@ -4,6 +4,7 @@ import argparse
 import curses
 import os
 import random
+import textwrap
 from tabulate import tabulate
 
 
@@ -142,7 +143,29 @@ class Board:
 
 
 def main() -> None:
-    _parse = argparse.ArgumentParser()
+    _parse = argparse.ArgumentParser(
+        prog="mastermind.py",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent(
+            """\
+            Mastermind, A Classic Board Game in Curses.
+
+            How to Play:
+            ------------
+             Try to guess a 4-digit code in 10 turns or fewer to win.
+
+             Commands:
+              Return: Confirm your guess.
+              0-9: Enter a code combination.
+              q: Quit or restart the game.
+
+             Feedback:
+              O: Correct number and position.
+              X: Correct number, wrong position.
+              _: Wrong number.
+            """
+        ),
+    )
     _parse.add_argument(
         "-c",
         "--cheat",
