@@ -8,23 +8,28 @@ from tabulate import tabulate
 
 
 class GameOver(Exception):
+    """Exception raised when the game is over."""
     pass
 
 
 class InvalidGuess(ValueError):
+    """Exception raised when an invalid guess is made."""
     pass
 
 
 class Board:
+    """Class representing the game board."""
     ROUNDS = 10
     NUMBERS = range(1, 7)
     PEGS = 4
 
     def __init__(self) -> None:
+        """Initialize a new game board."""
         self._rounds = tuple(f"{r:02}" for r in range(1, self.ROUNDS + 1))
         self.reset()
 
     def reset(self) -> None:
+        """Reset the game board for a new game."""
         self._code = random.sample(self.NUMBERS, self.PEGS)
         self._code_pegs = []
         self._feedback_pegs = []
@@ -33,20 +38,24 @@ class Board:
 
     @property
     def code(self):
+        """Get the secret code."""
         return self._code
 
     @code.setter
     def code(self, code):
+        """Set the secret code."""
         self.__validate_code(code)
 
         self._code = code
 
     @property
     def current_guess(self) -> list[int]:
+        """Get the current guess."""
         return [int(n) for n in self._code_pegs[self.current_round]]
 
     @current_guess.setter
     def current_guess(self, guess: list[int]) -> None:
+        """Set the current guess and check if the game is won or lost."""
         self.__validate_code(guess)
 
         self._code_pegs.append("".join(map(str, guess)))
@@ -63,6 +72,7 @@ class Board:
             raise GameOver
 
     def __feedback(self, code: list[int]) -> list[str]:
+        """Provide feedback for a guess."""
         self.__validate_code(code)
 
         feedback_pegs = []
@@ -83,6 +93,7 @@ class Board:
 
     @property
     def __data(self) -> dict:
+        """Get a formated data for displaying the board correctly."""
         return {
             "": self._rounds,
             "code": self._code_pegs + ["...."] * (self.ROUNDS - len(self._code_pegs)),
@@ -91,6 +102,25 @@ class Board:
         }
 
     def draw(self) -> str:
+        """
+        Generate a representation of the game board.
+
+        Returns:
+            +----+------+------+
+            |    | pegs | code |
+            +----+------+------+
+            | 01 | .... | .... |
+            | 02 | .... | .... |
+            | 03 | .... | .... |
+            | 04 | .... | .... |
+            | 05 | .... | .... |
+            | 06 | .... | .... |
+            | 07 | .... | .... |
+            | 08 | .... | .... |
+            | 09 | .... | .... |
+            | 10 | .... | .... |
+            +----+------+------+
+        """
         return tabulate(
             self.__data,
             headers="keys",
@@ -99,6 +129,7 @@ class Board:
         )
 
     def __validate_code(self, code: list[int]) -> None:
+        """Validate a code guess."""
         if len(code) != self.PEGS:
             raise InvalidGuess(f"Enter exactly {self.PEGS} numbers.")
 
@@ -179,6 +210,7 @@ def play_game(
     HINT_X: int,
     CHEAT: bool,
 ) -> None:
+    """Play the game loop."""
     board = Board()
 
     stdscr.clear()
@@ -230,6 +262,7 @@ def play_game(
 def make_guess(
     input_window: curses.window,
 ) -> list[int]:
+    """Get the player's guess"""
     guess = []
     while True:
         key = input_window.getkey()
@@ -259,6 +292,7 @@ def game_over(
     input_window: curses.window,
     HINT_X: int,
 ) -> None:
+    """Handle the end of the game."""
     if board.player_won:
         header = "Congratulations!"
         message = f"You won, your score is {(board.ROUNDS - board.current_round):02}/{board.ROUNDS}."  # 29 cols
@@ -290,6 +324,7 @@ def game_over(
 def cheat(
     code: list[int],
 ) -> None:
+    """Enabels cheats by writing the secret code to a file."""
     tmpfile = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
 
     with open(tmpfile, "w") as f:
