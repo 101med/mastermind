@@ -12,8 +12,8 @@ class GameOver(Exception):
     pass
 
 
-class InvalidGuess(ValueError):
-    """Exception raised when an invalid guess is made."""
+class InvalidCode(ValueError):
+    """Exception raised when an invalid code is made or set."""
     pass
 
 
@@ -44,7 +44,7 @@ class Board:
     @code.setter
     def code(self, code):
         """Set the secret code."""
-        self.__validate_code(code)
+        self.validate_code(code)
 
         self._code = code
 
@@ -56,10 +56,10 @@ class Board:
     @current_guess.setter
     def current_guess(self, guess: list[int]) -> None:
         """Set the current guess and check if the game is won or lost."""
-        self.__validate_code(guess)
+        self.validate_code(guess)
 
         self._code_pegs.append("".join(map(str, guess)))
-        self._feedback_pegs.append("".join(self.__feedback(guess)))
+        self._feedback_pegs.append("".join(self.feedback(guess)))
 
         if guess == self._code:
             self.player_won = True
@@ -71,9 +71,9 @@ class Board:
         else:
             raise GameOver
 
-    def __feedback(self, code: list[int]) -> list[str]:
+    def feedback(self, code: list[int]) -> list[str]:
         """Provide feedback for a guess."""
-        self.__validate_code(code)
+        self.validate_code(code)
 
         feedback_pegs = []
         try:
@@ -92,7 +92,7 @@ class Board:
         return feedback_pegs
 
     @property
-    def __data(self) -> dict:
+    def data(self) -> dict:
         """Get a formated data for displaying the board correctly."""
         return {
             "": self._rounds,
@@ -122,23 +122,23 @@ class Board:
             +----+------+------+
         """
         return tabulate(
-            self.__data,
+            self.data,
             headers="keys",
             tablefmt="pretty",
             numalign="center",
         )
 
-    def __validate_code(self, code: list[int]) -> None:
+    def validate_code(self, code: list[int]) -> None:
         """Validate a code guess."""
         if len(code) != self.PEGS:
-            raise InvalidGuess(f"Enter exactly {self.PEGS} numbers.")
+            raise InvalidCode(f"Enter exactly {self.PEGS} numbers.")
 
         for n in code:
             if n not in self.NUMBERS:
-                raise InvalidGuess("Use numbers between 1 and 6.")
+                raise InvalidCode("Use numbers between 1 and 6.")
 
         if len(set(code)) != self.PEGS:
-            raise InvalidGuess("Do not repeat numbers.")
+            raise InvalidCode("Do not repeat numbers.")
 
 
 def main() -> None:
@@ -236,7 +236,7 @@ def play_game(
             try:
                 board.current_guess = make_guess(input_window)
                 break
-            except InvalidGuess as e:
+            except InvalidCode as e:
                 hint = f"Hint: {str(e)}"
                 hint_x = (HINT_X - len(hint)) // 2
 
