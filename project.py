@@ -2,6 +2,7 @@ import argparse
 import curses
 import os
 import random
+
 # import subprocess
 import textwrap
 from tabulate import tabulate
@@ -109,8 +110,8 @@ class Board:
         """Get a formated data for displaying the board correctly."""
         return {
             "": self._rounds,
-            "code": self._code_pegs + ["...."] * (self.ROUNDS - len(self._code_pegs)),
-            "pegs": self._feedback_pegs
+            "Code": self._code_pegs + ["...."] * (self.ROUNDS - len(self._code_pegs)),
+            "Pegs": self._feedback_pegs
             + ["...."] * (self.ROUNDS - len(self._feedback_pegs)),
         }
 
@@ -331,7 +332,7 @@ def help_menu(
 ) -> None:
     help_menu_text = textwrap.dedent(
         """\
-        +------------------------------------------+
+        +-------------------Help-------------------+
         | Objective:                               |
         | ----------                               |
         | - Your aim is to guess a 4-digit code in |
@@ -392,6 +393,7 @@ def help_menu(
         """
     )
     headers_coordinate = (
+        (0, 20, 4),
         (1, 1, 11),
         (6, 1, 17),
         (15, 1, 7),
