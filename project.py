@@ -1,25 +1,37 @@
-#!/usr/bin/env python3
-
 import argparse
 import curses
 import os
 import random
+# import subprocess
 import textwrap
 from tabulate import tabulate
 
 
+# class SmallTerminal(Exception):
+#     """Exception raised when the terminal's coordinates are less then 21x50."""
+#
+#     pass
+
+
+class ExitHelp(Exception):
+    pass
+
+
 class GameOver(Exception):
     """Exception raised when the game is over."""
+
     pass
 
 
 class InvalidCode(ValueError):
     """Exception raised when an invalid code is made or set."""
+
     pass
 
 
 class Board:
     """Class representing the game board."""
+
     ROUNDS = 10
     NUMBERS = range(1, 7)
     PEGS = 4
@@ -142,29 +154,10 @@ class Board:
             raise InvalidCode("Do not repeat numbers.")
 
 
+# def main(LINES: int, COLS: int) -> None:
 def main() -> None:
     _parse = argparse.ArgumentParser(
-        prog="mastermind.py",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent(
-            """\
-            Mastermind, A Classic Board Game in Curses.
-
-            How to Play:
-            ------------
-             Try to guess a 4-digit code in 10 turns or fewer to win.
-
-             Commands:
-              Return: Confirm your guess.
-              0-9: Enter a code combination.
-              q: Quit or restart the game.
-
-             Feedback:
-              O: Correct number and position.
-              X: Correct number, wrong position.
-              _: Wrong number.
-            """
-        ),
+        prog="mastermind.py", description="Mastermind, A Classic Board Game in Curses."
     )
     _parse.add_argument(
         "-c",
@@ -177,10 +170,6 @@ def main() -> None:
     try:
         stdscr = curses.initscr()
 
-        if curses.LINES < 21 or curses.COLS < 50:
-            print("Resize your terminal to play the game (21x50 or more)")
-            exit(1)
-
         curses.noecho()
         curses.cbreak()
         curses.curs_set(0)
@@ -188,17 +177,21 @@ def main() -> None:
         BOARD_Y, BOARD_X = (14, 21)
         HINT_Y, HINT_X = (4, 40)
         INPUT_Y, INPUT_X = (1, 5)
+        HELP_Y, HELP_X = (61, 45)
 
         BOARD_BEG_Y = (curses.LINES - (BOARD_Y + HINT_Y)) // 2
         BOARD_BEG_X = (curses.COLS - 21 + 1) // 2
         HINT_BEG_Y = BOARD_BEG_Y + BOARD_Y + 1
         HINT_BEG_X = (curses.COLS - HINT_X) // 2
+        HELP_BEG_X = (curses.COLS - HELP_X) // 2
 
         board_window = curses.newwin(BOARD_Y, BOARD_X, BOARD_BEG_Y, BOARD_BEG_X)
         hint_window = curses.newwin(HINT_Y, HINT_X, HINT_BEG_Y, HINT_BEG_X)
         input_window = curses.newwin(INPUT_Y, INPUT_X, 1, 1)
+        help_pad = curses.newpad(HELP_Y, HELP_X)
 
         input_window.keypad(True)
+        help_pad.keypad(True)
 
         CHEAT = True if args.cheat else False
 
@@ -207,15 +200,19 @@ def main() -> None:
             board_window,
             hint_window,
             input_window,
+            help_pad,
             BOARD_BEG_Y,
             BOARD_BEG_X,
             HINT_X,
+            HELP_Y,
+            HELP_X,
+            HELP_BEG_X,
             CHEAT,
         )
 
     finally:
-        if "input_window" in locals():
-            input_window.keypad(False)
+        input_window.keypad(False)
+        help_pad.keypad(False)
 
         curses.echo()
         curses.nocbreak()
@@ -228,12 +225,16 @@ def play_game(
     board_window: curses.window,
     hint_window: curses.window,
     input_window: curses.window,
+    help_pad: curses.window,
     BOARD_BEG_Y: int,
     BOARD_BEG_X: int,
     HINT_X: int,
+    HELP_Y: int,
+    HELP_X: int,
+    HELP_BEG_X: int,
     CHEAT: bool,
 ) -> None:
-    """Play the game loop."""
+    """Game loop."""
     board = Board()
 
     stdscr.clear()
@@ -241,49 +242,59 @@ def play_game(
     stdscr.refresh()
 
     while True:
-        if CHEAT:
-            cheat(board.code)
+        try:
+            if CHEAT:
+                cheat(board.code)
 
-        board_window.erase()
-        hint_window.erase()
-        input_window.erase()
+            board_window.erase()
+            hint_window.erase()
+            input_window.erase()
 
-        board_window.addstr(board.draw())
-        input_window.noutrefresh()
-        input_window.mvwin(BOARD_BEG_Y + (board.current_round) + 3, BOARD_BEG_X + 7)
+            board_window.addstr(board.draw())
+            input_window.noutrefresh()
+            input_window.mvwin(BOARD_BEG_Y + (board.current_round) + 3, BOARD_BEG_X + 7)
 
-        board_window.refresh()
-        hint_window.refresh()
+            board_window.refresh()
+            hint_window.refresh()
 
-        while True:
-            try:
-                board.current_guess = make_guess(input_window)
-                break
-            except InvalidCode as e:
-                hint = f"Hint: {str(e)}"
-                hint_x = (HINT_X - len(hint)) // 2
+            while True:
+                try:
+                    board.current_guess = make_guess(
+                        input_window, help_pad, HELP_Y, HELP_X, HELP_BEG_X
+                    )
+                    break
+                except InvalidCode as e:
+                    hint = f"Hint: {str(e)}"
+                    hint_x = (HINT_X - len(hint)) // 2
 
-                input_window.erase()
-                hint_window.erase()
+                    input_window.erase()
+                    hint_window.erase()
 
-                hint_window.addstr(0, hint_x, hint)
-                hint_window.chgat(0, hint_x, 5, curses.A_BOLD)
+                    hint_window.addstr(0, hint_x, hint)
+                    hint_window.chgat(0, hint_x, 5, curses.A_BOLD)
 
-                hint_window.refresh()
+                    hint_window.refresh()
 
-            except GameOver:
-                game_over(
-                    board,
-                    board_window,
-                    hint_window,
-                    input_window,
-                    HINT_X,
-                )
-                break
+                except GameOver:
+                    game_over(
+                        board,
+                        board_window,
+                        hint_window,
+                        input_window,
+                        HINT_X,
+                    )
+                    break
+
+        except ExitHelp:
+            continue
 
 
 def make_guess(
     input_window: curses.window,
+    help_pad: curses.window,
+    HELP_Y: int,
+    HELP_X: int,
+    HELP_BEG_X: int,
 ) -> list[int]:
     """Get the player's guess"""
     guess = []
@@ -301,11 +312,126 @@ def make_guess(
         elif key == "q":
             raise GameOver
 
+        elif key == "h":
+            help_menu(help_pad, HELP_Y, HELP_X, HELP_BEG_X)
+            raise ExitHelp
+
         elif key == "\n":
             return guess
 
         else:
             continue
+
+
+def help_menu(
+    help_pad: curses.window,
+    HELP_Y: int,
+    HELP_X: int,
+    HELP_BEG_X: int,
+) -> None:
+    help_menu_text = textwrap.dedent(
+        """\
+        +------------------------------------------+
+        | Objective:                               |
+        | ----------                               |
+        | - Your aim is to guess a 4-digit code in |
+        | 10 turns or less.                        |
+        |                                          |
+        | Code Parameters:                         |
+        | ----------------                         |
+        | - The code consists of four unique       |
+        | numbers between 1 and 6.                 |
+        |                                          |
+        | Examples:                                |
+        | - Valid Codes: 1234, 3456, 4312, etc.    |
+        | - Invalid Codes: 0123, 1111, 6789, etc.  |
+        |                                          |
+        | Turns:                                   |
+        | ------                                   |
+        | - You have a maximum of 10               |
+        | turns to guess the code.                 |
+        |                                          |
+        | Making a Guess:                          |
+        | ---------------                          |
+        | - In each turn, use the following        |
+        | keyboard keys:                           |
+        |                                          |
+        |   - 0-9: Enter a code combination.       |
+        |   - Return/Enter: Confirm your guess.    |
+        |   - q: Quit or restart the game.         |
+        |                                          |
+        | Feedback:                                |
+        | ---------                                |
+        | - After each guess, you'll receive       |
+        | feedback:                                |
+        |                                          |
+        |   - O: Correct number and position.      |
+        |   - X: Correct number, wrong position.   |
+        |   - _: Wrong number.                     |
+        |                                          |
+        | Examples:                                |
+        | +--------+-------+----------+            |
+        | | Code   | Guess | Feedback |            |
+        | +--------+-------+----------+            |
+        | | 1234   | 1234  | OOOO     |            |
+        | | 1234   | 1243  | OOXX     |            |
+        | | 1234   | 1256  | OX__     |            |
+        | +--------+-------+----------+            |
+        |                                          |
+        | Winning:                                 |
+        | --------                                 |
+        | - Successfully guessing the 4-digit code |
+        | within 10 turns results in a win.        |
+        |                                          |
+        | - Failing to do so means you lose, and   |
+        | the correct code is revealed.            |
+        |                                          |
+        | - You will be prompted to either restart |
+        | the game or quit.                        |
+        +------------------------------------------+        
+        """
+    )
+    headers_coordinate = (
+        (1, 1, 11),
+        (6, 1, 17),
+        (15, 1, 7),
+        (20, 1, 16),
+        (29, 1, 10),
+        (38, 1, 10),
+        (47, 1, 9),
+    )
+    curser_position = 0
+
+    help_pad.erase()
+    help_pad.addstr(help_menu_text)
+
+    for header_coordinate in headers_coordinate:
+        help_pad.chgat(*header_coordinate, curses.A_BOLD)
+
+    help_pad.refresh(0, 0, 1, HELP_BEG_X, curses.LINES - 2, HELP_BEG_X + HELP_X)
+
+    while True:
+        key = help_pad.getkey()
+
+        if key.upper() in ("KEY_DOWN", "J") and curser_position < (
+            HELP_Y - curses.LINES - 1
+        ):
+            curser_position += 1
+
+        elif key.upper() in ("KEY_UP", "K") and curser_position > 0:
+            curser_position -= 1
+
+        elif key.upper() == "Q":
+            help_pad.erase()
+            help_pad.refresh(0, 0, 1, HELP_BEG_X, curses.LINES - 2, HELP_BEG_X + HELP_X)
+            break
+
+        else:
+            continue
+
+        help_pad.refresh(
+            curser_position, 0, 1, HELP_BEG_X, curses.LINES - 2, HELP_BEG_X + HELP_X
+        )
 
 
 def game_over(
@@ -356,3 +482,22 @@ def cheat(
 
 if __name__ == "__main__":
     main()
+    # try:
+    #     LINES, COLS = map(
+    #         int,
+    #         subprocess.check_output(
+    #             r"printf 'lines\ncols' | tput -S", shell=True, text=True
+    #         ).splitlines(),
+    #     )
+    #
+    #     if LINES < 21 or COLS < 50:
+    #         raise SmallTerminal
+    #
+    #     main(LINES, COLS)
+    # except SmallTerminal:
+    #     print(
+    #         "Please resize your terminal to a minimum size of 21x50 or larger to fully enjoy the game.",
+    #         f"Current: {LINES}x{COLS}.",
+    #         sep="\n",
+    #     )
+    #     exit(1)
