@@ -149,7 +149,7 @@ def play_game() -> None:
             INPUT.noutrefresh()
             INPUT.mvwin(BOARD_BEG_Y + (board.current_round) + 3, BOARD_BEG_X + 7)
 
-            HINT.refresh()
+            HINT.noutrefresh()
             BOARD.refresh()
 
             board.current_guess = handle_input()
@@ -332,6 +332,12 @@ def show_help_menu() -> None:
             HELP.erase()
             HELP.noutrefresh(0, 0, 1, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X)
             break
+
+        elif key == "KEY_PPAGE":
+            curser_position = 0
+
+        elif key == "KEY_NPAGE":
+            curser_position = HELP_Y - MAIN_Y - 1
 
         else:
             continue
