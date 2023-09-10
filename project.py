@@ -137,9 +137,24 @@ class Board:
             f.write("".join(map(str, self.code)) + "\n")
 
 
-def main():
+def main() -> None:
+    board = Board(cheats=args.cheats)
+
     init_interface()
-    play_game()
+
+    while True:
+        try:
+            refresh_board(board)
+            board.current_guess = handle_input()
+
+        except InvalidCode as e:
+            show_hint(e)
+
+        except GameOver:
+            game_over(board)
+
+        except Help:
+            show_help_menu()
 
 
 def init_interface() -> None:
@@ -161,24 +176,6 @@ def init_interface() -> None:
     stdscr.chgat(curses.LINES - 1, instructions_text_beg_x + 41, 1, curses.A_BOLD)
 
     stdscr.refresh()
-
-
-def play_game() -> None:
-    board = Board(cheats=True if args.cheats else False)
-
-    while True:
-        try:
-            refresh_board(board)
-            board.current_guess = handle_input()
-
-        except InvalidCode as e:
-            show_hint(e)
-
-        except GameOver:
-            game_over(board)
-
-        except Help:
-            show_help_menu()
 
 
 def refresh_board(board) -> None:
@@ -220,8 +217,8 @@ def handle_input() -> list[int]:
             continue
 
 
-def show_hint(e: ValueError) -> None:
-    hint_text = f"Hint: {str(e)}"
+def show_hint(message: ValueError) -> None:
+    hint_text = f"Hint: {str(message)}"
     hint_text_beg_y = (HINT_Y - 1) // 2
     hint_text_beg_x = (HINT_X - len(hint_text)) // 2
 
@@ -330,7 +327,7 @@ def show_help_menu() -> None:
     )
 
     curser_position = 0
-    CURSER_POSITION_MAX = HELP_Y - MAIN_Y + 2
+    CURSER_POSITION_MAX = HELP_Y - MAIN_Y + 1
 
     HELP.erase()
     HELP.addstr(help_menu_text)
