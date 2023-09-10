@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import argparse
 import curses
 import random
+import os
 import textwrap
 from tabulate import tabulate
 
@@ -23,8 +25,10 @@ class Board:
     NUMBERS = range(1, 7)
     PEGS = 4
 
-    def __init__(self) -> None:
+    def __init__(self, cheats=False) -> None:
         self._rounds = tuple(f"{r:02}" for r in range(1, self.ROUNDS + 1))
+        self._cheats = cheats
+
         self.reset()
 
     def reset(self) -> None:
@@ -33,6 +37,18 @@ class Board:
         self._feedback_pegs = []
         self.current_round = 0
         self.player_won = False
+
+        if self._cheats:
+            self.reveal_code()
+
+    @property
+    def cheats(self) -> bool:
+        return self._cheats
+
+    @cheats.setter
+    def cheats(self, c: bool) -> None:
+        if isinstance(c, bool):
+            self._cheats = c
 
     @property
     def code(self) -> list[int]:
@@ -114,54 +130,68 @@ class Board:
             numalign="center",
         )
 
+    def reveal_code(self) -> None:
+        tmpfile = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
 
-def main() -> None:
-    title = "+MasterMind+"
-    title_beg_x = (curses.COLS - len(title)) // 2
+        with open(tmpfile, "w") as f:
+            f.write("".join(map(str, self.code)) + "\n")
 
-    MAIN.border("|", "|", "-", "-", "+", "+", "+", "+")
-    stdscr.addstr(0, title_beg_x, title)
-    stdscr.chgat(0, title_beg_x + 1, len(title) - 2, curses.A_BOLD)
 
-    keys = "0-9 Guess. Enter Confirm. H Toggle help. Q quit."
-    keys_x = (curses.COLS - len(keys)) // 2
-    stdscr.addstr(
-        curses.LINES - 1, keys_x, keys
-    )
-    stdscr.chgat(curses.LINES - 1, keys_x + 0, 3, curses.A_BOLD)
-    stdscr.chgat(curses.LINES - 1, keys_x + 11, 5, curses.A_BOLD)
-    stdscr.chgat(curses.LINES - 1, keys_x + 26, 1, curses.A_BOLD)
-    stdscr.chgat(curses.LINES - 1, keys_x + 41, 1, curses.A_BOLD)
-    stdscr.refresh()
-
+def main():
+    init_interface()
     play_game()
 
 
+def init_interface() -> None:
+    title_text = "+MasterMind+"
+    instructions_text = "0-9 Guess. Enter Confirm. H Toggle help. Q quit."
+
+    title_text_beg_x = (curses.COLS - len(title_text)) // 2
+    instructions_text_beg_x = (curses.COLS - len(instructions_text)) // 2
+
+    MAIN.border("|", "|", "-", "-", "+", "+", "+", "+")
+
+    stdscr.addstr(0, title_text_beg_x, title_text)
+    stdscr.chgat(0, title_text_beg_x + 1, len(title_text) - 2, curses.A_BOLD)
+
+    stdscr.addstr(curses.LINES - 1, instructions_text_beg_x, instructions_text)
+    stdscr.chgat(curses.LINES - 1, instructions_text_beg_x + 0, 3, curses.A_BOLD)
+    stdscr.chgat(curses.LINES - 1, instructions_text_beg_x + 11, 5, curses.A_BOLD)
+    stdscr.chgat(curses.LINES - 1, instructions_text_beg_x + 26, 1, curses.A_BOLD)
+    stdscr.chgat(curses.LINES - 1, instructions_text_beg_x + 41, 1, curses.A_BOLD)
+
+    stdscr.refresh()
+
+
 def play_game() -> None:
-    board = Board()
+    board = Board(cheats=True if args.cheats else False)
+
     while True:
         try:
-            BOARD.erase()
-            HINT.erase()
-            INPUT.erase()
-
-            BOARD.addstr(board.draw())
-            INPUT.noutrefresh()
-            INPUT.mvwin(BOARD_BEG_Y + (board.current_round) + 3, BOARD_BEG_X + 7)
-
-            HINT.noutrefresh()
-            BOARD.refresh()
-
+            refresh_board(board)
             board.current_guess = handle_input()
 
         except InvalidCode as e:
-            display_hint(e)
+            show_hint(e)
 
         except GameOver:
             game_over(board)
 
         except Help:
             show_help_menu()
+
+
+def refresh_board(board) -> None:
+    BOARD.erase()
+    HINT.erase()
+    INPUT.erase()
+
+    BOARD.addstr(board.draw())
+    INPUT.noutrefresh()
+    INPUT.mvwin(BOARD_BEG_Y + (board.current_round) + 3, BOARD_BEG_X + 7)
+
+    HINT.noutrefresh()
+    BOARD.refresh()
 
 
 def handle_input() -> list[int]:
@@ -190,162 +220,87 @@ def handle_input() -> list[int]:
             continue
 
 
-def display_hint(e: ValueError) -> None:
-    hint = f"Hint: {str(e)}"
-    hint_y = (HINT_Y - 1) // 2
-    hint_x = (HINT_X - len(hint)) // 2
+def show_hint(e: ValueError) -> None:
+    hint_text = f"Hint: {str(e)}"
+    hint_text_beg_y = (HINT_Y - 1) // 2
+    hint_text_beg_x = (HINT_X - len(hint_text)) // 2
 
     HINT.erase()
+
     HINT.border("|", "|", "-", "-", "+", "+", "+", "+")
-    HINT.addstr(hint_y, hint_x, hint)
-    HINT.chgat(hint_y, hint_x, 5, curses.A_BOLD)
+
+    HINT.addstr(hint_text_beg_y, hint_text_beg_x, hint_text)
+    HINT.chgat(hint_text_beg_y, hint_text_beg_x, 5, curses.A_BOLD)
+
     HINT.getkey()
 
 
 def game_over(board: Board) -> None:
     if board.player_won:
-        header = "Congratulations!"
-        message = f"You won, your score is {(board.ROUNDS - board.current_round):02}/{board.ROUNDS}."  # 29 cols
+        score = "{:02}/{}".format(board.ROUNDS - board.current_round, board.ROUNDS)
+
+        header_text = "Congratulations!"
+        message_text = f"You won, your score is {score}"
     else:
-        header = "Oops!"
-        message = f"You lost, the code was {''.join(map(str, board._code))}."  # 28 cols
+        code_str = "".join(map(str, board._code))
 
-    footer = "Press any key to restart, q to quit"
+        header_text = "Oops!"
+        message_text = f"You lost, the code was: {code_str}"
 
-    hint_x = (HINT_X - len(message)) // 2
-    hint_y = (HINT_X - len(header)) // 2
+    footer_text = "Press any key to restart (q to quit)"
+
+    header_text_beg_x = (HINT_X - len(header_text)) // 2
+    header_text_beg_y = ((HINT_Y - 1) // 2) - 1
+
+    message_text_beg_x = (HINT_X - len(message_text)) // 2
+    message_text_beg_y = header_text_beg_y + 2
+
+    footer_text_beg_x = (curses.COLS - len(footer_text)) // 2
+    footer_text_beg_y = MAIN_Y - 2
 
     BOARD.erase()
     HINT.erase()
 
     BOARD.addstr(board.draw(), curses.A_DIM)
+
     HINT.border("|", "|", "-", "-", "+", "+", "+", "+")
-    HINT.addstr(2, hint_y, header, curses.A_BOLD)
-    HINT.addstr(4, hint_x, message)
-    HINT.chgat(4, hint_x + 23, 4 if len(message) == 28 else 5, curses.A_BOLD)
+
+    HINT.addstr(header_text_beg_y, header_text_beg_x, header_text, curses.A_BOLD)
+
+    HINT.addstr(message_text_beg_y, message_text_beg_x, message_text)
+    HINT.chgat(4, message_text_beg_x + len(message_text) - 4, 4, curses.A_BOLD)
 
     BOARD.refresh()
     HINT.refresh()
 
-    stdscr.addstr(MAIN_Y - 3, (curses.COLS - len(footer)) // 2, footer, curses.A_BLINK)
+    stdscr.addstr(footer_text_beg_y, footer_text_beg_x, footer_text, curses.A_BLINK)
 
     if stdscr.getkey() == "q":
         exit(0)
 
-    stdscr.addstr(MAIN_Y - 3, (MAIN_X - len(footer)) // 2, " " * len(footer))
+    # Clear the footer text without clearing the whole window.
+    stdscr.addstr(footer_text_beg_y, footer_text_beg_x, " " * len(footer_text))
     stdscr.refresh()
 
     board.reset()
 
 
 def show_help_menu() -> None:
-    help_menu_text = textwrap.dedent(
-        """\
-+-------------------Help-------------------+
-| Objective:                               |
-| ----------                               |
-| - Your aim is to guess a 4-digit code in |
-| 10 turns or less.                        |
-|                                          |
-| Code Parameters:                         |
-| ----------------                         |
-| - The code consists of four unique       |
-| numbers between 1 and 6.                 |
-|                                          |
-| Examples:                                |
-| - Valid Codes: 1234, 3456, 4312, etc.    |
-| - Invalid Codes: 0123, 1111, 6789, etc.  |
-|                                          |
-| Turns:                                   |
-| ------                                   |
-| - You have a maximum of 10               |
-| turns to guess the code.                 |
-|                                          |
-| Making a Guess:                          |
-| ---------------                          |
-| - In each turn, use the following        |
-| keyboard keys:                           |
-|                                          |
-|   - 0-9: Enter a code combination.       |
-|   - Return/Enter: Confirm your guess.    |
-|   - q: Quit or restart the game.         |
-|                                          |
-| Feedback:                                |
-| ---------                                |
-| - After each guess, you'll receive       |
-| feedback:                                |
-|                                          |
-|   - O: Correct number and position.      |
-|   - X: Correct number, wrong position.   |
-|   - _: Wrong number.                     |
-|                                          |
-| Examples:                                |
-| +--------+-------+----------+            |
-| | Code   | Guess | Feedback |            |
-| +--------+-------+----------+            |
-| | 1234   | 1234  | OOOO     |            |
-| | 1234   | 1243  | OOXX     |            |
-| | 1234   | 1256  | OX__     |            |
-| +--------+-------+----------+            |
-|                                          |
-| Winning:                                 |
-| --------                                 |
-| - Successfully guessing the 4-digit code |
-| within 10 turns results in a win.        |
-|                                          |
-| - Failing to do so means you lose, and   |
-| the correct code is revealed.            |
-|                                          |
-| - You will be prompted to either restart |
-| the game or quit.                        |
-+------------------------------------------+"""
-    )
-    headers_coordinate = (
-        (0, 20, 4),
-        (1, 1, 11),
-        (6, 1, 17),
-        (15, 1, 7),
-        (20, 1, 16),
-        (29, 1, 10),
-        (47, 1, 9),
-    )
-    curser_position = 0
-
-    HELP.erase()
-    HELP.addstr(help_menu_text)
-
-    for header_coordinate in headers_coordinate:
-        HELP.chgat(*header_coordinate, curses.A_BOLD)
-
-    HELP.refresh(0, 0, 1, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X)
-
-    while True:
-        key = HELP.getkey()
-
-        if key.upper() in ("KEY_DOWN", "J") and curser_position < (HELP_Y - MAIN_Y - 1):
-            curser_position += 1
-
-        elif key.upper() in ("KEY_UP", "K") and curser_position > 0:
-            curser_position -= 1
-
-        elif key.upper() in ("Q", "H"):
-            HELP.erase()
-            HELP.noutrefresh(0, 0, 1, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X)
-            break
-
-        elif key == "KEY_PPAGE":
-            curser_position = 0
-
-        elif key == "KEY_NPAGE":
-            curser_position = HELP_Y - MAIN_Y - 1
-
-        else:
-            continue
-
-        HELP.refresh(curser_position, 0, 1, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X)
+    ...
 
 
 if __name__ == "__main__":
+    _parse = argparse.ArgumentParser(
+        description="Classic board-game MasterMind in the terminal."
+    )
+    _parse.add_argument(
+        "-c",
+        "--cheats",
+        help="store game's code in $TMPDIR/mastermind.txt",
+        action="store_true",
+    )
+
+    args = _parse.parse_args()
     try:
         stdscr = curses.initscr()
 
@@ -353,34 +308,39 @@ if __name__ == "__main__":
         curses.cbreak()
         curses.curs_set(0)
 
-        MAIN = stdscr.subwin(curses.LINES - 1, curses.COLS, 0, 0)
-        MAIN_Y, MAIN_X = MAIN.getmaxyx()
-        BOARD_Y, BOARD_X = (14, 21)
-        HINT_Y, HINT_X = (7, 40)
-        INPUT_Y, INPUT_X = (1, 5)
-        HELP_Y, HELP_X = (61, 45)
-        BOARD_BEG_Y = (MAIN_Y - BOARD_Y) // 2
-        BOARD_BEG_X = (MAIN_X - BOARD_X + 1) // 2
-        HINT_BEG_Y = (MAIN_Y - HINT_Y + 1) // 2
-        HINT_BEG_X = (MAIN_X - HINT_X + 1) // 2
-        HELP_BEG_Y = (MAIN_Y - HELP_Y + 1) // 2
-        HELP_BEG_X = (MAIN_X - HELP_X + 1) // 2
+        MAIN_Y, MAIN_X = (curses.LINES - 1, curses.COLS)
+        MAIN_BEG_Y = (curses.LINES - MAIN_Y) // 2
+        MAIN_BEG_X = (curses.COLS - MAIN_X) // 2
+        MAIN = stdscr.subwin(MAIN_Y, MAIN_X, MAIN_BEG_Y, MAIN_BEG_X)
 
+        BOARD_Y, BOARD_X = (14, 21)
+        BOARD_BEG_Y = (MAIN_Y - BOARD_Y) // 2
+        BOARD_BEG_X = (MAIN_X - BOARD_X) // 2
         BOARD = curses.newwin(BOARD_Y, BOARD_X, BOARD_BEG_Y, BOARD_BEG_X)
-        HINT = curses.newwin(HINT_Y, HINT_X, HINT_BEG_Y, HINT_BEG_X)
-        INPUT = curses.newwin(INPUT_Y, INPUT_X, 1, 1)
-        HELP = curses.newpad(HELP_Y, HELP_X)
+
+        HINT_Y, HINT_X = (7, 40)
+        HINT_BEG_Y = (MAIN_Y - HINT_Y) // 2
+        HINT_BEG_X = (MAIN_X - HINT_X) // 2
+        HINT = stdscr.subwin(HINT_Y, HINT_X, HINT_BEG_Y, HINT_BEG_X)
+
+        INPUT_Y, INPUT_X = (1, 5)
+        INPUT_BEG_Y = 1
+        INPUT_BEG_X = 1
+        INPUT = stdscr.subwin(INPUT_Y, INPUT_X, INPUT_BEG_Y, INPUT_BEG_X)
+
+        # HELP_Y, HELP_X = (0, 0)
+        # HELP = curses.newpad(HELP_Y, HELP_X)
 
         INPUT.keypad(True)
-        HELP.keypad(True)
+        # HELP.keypad(True)
 
         main()
     finally:
         if "INPUT" in locals():
             INPUT.keypad(False)
 
-        if "HELP" in locals():
-            HELP.keypad(False)
+        # if "HELP" in locals():
+        #     HELP.keypad(False)
 
         curses.echo()
         curses.nocbreak()
