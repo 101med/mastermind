@@ -207,10 +207,10 @@ def handle_input() -> list[int]:
             guess.pop()
             INPUT.delch(0, len(guess))
 
-        elif key == "q":
+        elif key.upper() == "Q":
             raise GameOver
 
-        elif key == "h":
+        elif key.upper() == "H":
             raise Help
 
         elif key == "\n":
@@ -286,7 +286,85 @@ def game_over(board: Board) -> None:
 
 
 def show_help_menu() -> None:
-    ...
+    help_menu_text = textwrap.dedent(
+        """\
++-------------------HELP-------------------+
+|                                          |
+| - The objective is to crack a code by    |
+| creating a guess that combines numbers   |
+| within the 1 to 6 range. Ensure that     |
+| each number is used only once.           |
+|                                          |
+| - player have a maximum of 10 attempts   |
+| to break the code.                       |
+|                                          |
+| - After making a valid guess, player     |
+| will receive feedback:                   |
+|                                          |
+|  - O: Correct number and position.       |
+|  - X: Correct number, wrong position.    |
+|  - _: Number is not part of the code.    |
+|                                          |
+| - Examples:                              |
+| +------+-------+----------+              |
+| | Code | Guess | Feedback |              |
+| +------+-------+----------+              |
+| | 1234 | 1234  | OOOO     |              |
+| | 6245 | 1234  | OX__     |              |
+| +------+-------+----------+              |
+|                                          |
+| - Note: The feedback provided does not   |
+| necessarily follow the order of the code |
+| or guess (O > X > _).                    |
+|                                          |
+| - Whether player successfully break the  |
+| code or fail to do so, the game ends,    |
+| displaying a game over menu.             |
+|                                          |
+| - In either case, player have the        |
+| option to restart or exit the game.      |
+|                                          |
+| - Enjoy the game!                        |
+|                                          |
++------------------------------------------+"""
+    )
+
+    curser_position = 0
+    CURSER_POSITION_MAX = HELP_Y - MAIN_Y + 2
+
+    HELP.erase()
+    HELP.addstr(help_menu_text)
+
+    HELP.refresh(0, 0, HELP_BEG_Y, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X)
+
+    while True:
+        key = HELP.getkey()
+
+        if key.upper() in ("KEY_DOWN", "J") and curser_position < CURSER_POSITION_MAX:
+            curser_position += 1
+
+        elif key.upper() in ("KEY_UP", "K") and curser_position > 0:
+            curser_position -= 1
+
+        elif key == "KEY_PPAGE":
+            curser_position = 0
+
+        elif key == "KEY_NPAGE":
+            curser_position = CURSER_POSITION_MAX
+
+        elif key.upper() in ("Q", "H"):
+            HELP.erase()
+            HELP.noutrefresh(
+                0, 0, HELP_BEG_Y, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X
+            )
+            break
+
+        else:
+            continue
+
+        HELP.refresh(
+            curser_position, 0, HELP_BEG_Y, HELP_BEG_X, MAIN_Y - 2, HELP_BEG_X + HELP_X
+        )
 
 
 if __name__ == "__main__":
@@ -328,19 +406,21 @@ if __name__ == "__main__":
         INPUT_BEG_X = 1
         INPUT = stdscr.subwin(INPUT_Y, INPUT_X, INPUT_BEG_Y, INPUT_BEG_X)
 
-        # HELP_Y, HELP_X = (0, 0)
-        # HELP = curses.newpad(HELP_Y, HELP_X)
+        HELP_Y, HELP_X = (40, 45)
+        HELP_BEG_Y = MAIN_BEG_Y + 1
+        HELP_BEG_X = (MAIN_X - HELP_X) // 2
+        HELP = curses.newpad(HELP_Y, HELP_X)
 
         INPUT.keypad(True)
-        # HELP.keypad(True)
+        HELP.keypad(True)
 
         main()
     finally:
         if "INPUT" in locals():
             INPUT.keypad(False)
 
-        # if "HELP" in locals():
-        #     HELP.keypad(False)
+        if "HELP" in locals():
+            HELP.keypad(False)
 
         curses.echo()
         curses.nocbreak()
