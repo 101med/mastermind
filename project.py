@@ -38,7 +38,6 @@ class MasterMindGame:
         self.player_won = False
 
     def generate_code(self) -> list[int]:
-        """Generate and return the secret code"""
         return random.sample(POSSIBLE_DIGITS, NUM_PEGS)
 
     @property
@@ -50,7 +49,6 @@ class MasterMindGame:
         self.make_guess(guess)
 
     def make_guess(self, code) -> None:
-        """Process the player's guess and update the game state"""
         if len(code) != NUM_PEGS:
             raise InvalidCode(f"Enter exactly {NUM_PEGS} numbers.")
 
@@ -112,7 +110,6 @@ class MasterMindUI:
         self.init_ui()
 
     def init_ui(self):
-        """Initialize the UI components (windows, coordinate, etc.)"""
         self.MAIN_Y, self.MAIN_X = (curses.LINES - 1, curses.COLS)
         self.MAIN_BEG_Y = (curses.LINES - self.MAIN_Y) // 2
         self.MAIN_BEG_X = (curses.COLS - self.MAIN_X) // 2
@@ -188,7 +185,6 @@ class MasterMindUI:
         self.board_window.refresh()
 
     def handle_user_input(self):
-        """Handle user input (guesses, commands, etc.)"""
         guess = []
         while True:
             key = self.input_window.getkey()
@@ -214,7 +210,6 @@ class MasterMindUI:
                 continue
 
     def show_hint(self, message):
-        """Display a hint message on the screen"""
         hint_text = f"Hint: {str(message)}"
         hint_text_beg_y = (self.HINT_Y - 1) // 2
         hint_text_beg_x = (self.HINT_X - len(hint_text)) // 2
@@ -229,7 +224,6 @@ class MasterMindUI:
         self.hint_window.getkey()
 
     def show_help(self):
-        """Display the help screen"""
         help_text = textwrap.dedent(
             """\
     +-------------------HELP-------------------+
@@ -331,7 +325,6 @@ class MasterMindUI:
             )
 
     def show_game_over(self):
-        """Display the game over screen"""
         if self.game.player_won:
             score = "{:02}/{}".format(MAX_ROUNDS - self.game.current_round, MAX_ROUNDS)
 
