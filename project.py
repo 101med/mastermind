@@ -116,7 +116,7 @@ class MasterMindUI:
 
         self.BOARD_Y, self.BOARD_X = (14, 21)
         self.BOARD_BEG_Y = (self.MAIN_Y - self.BOARD_Y) // 2
-        self.BOARD_BEG_X = (self.MAIN_X - self.BOARD_X) // 2
+        self.BOARD_BEG_X = (self.MAIN_X - self.BOARD_X + 1) // 2
 
         self.HINT_Y, self.HINT_X = (7, 40)
         self.HINT_BEG_Y = (self.MAIN_Y - self.HINT_Y) // 2
@@ -128,7 +128,7 @@ class MasterMindUI:
 
         self.HELP_Y, self.HELP_X = (40, 45)
         self.HELP_BEG_Y = self.MAIN_BEG_Y + 1
-        self.HELP_BEG_X = (self.MAIN_X - self.HELP_X) // 2
+        self.HELP_BEG_X = (self.MAIN_X - self.HELP_X + 1) // 2
 
         self.main_window = self.stdscr.subwin(
             self.MAIN_Y, self.MAIN_X, self.MAIN_BEG_Y, self.MAIN_BEG_X
@@ -330,11 +330,13 @@ class MasterMindUI:
 
             header_text = "Congratulations!"
             message_text = f"You won, your score is {score}"
+            hightlight = 5
         else:
             code_str = "".join(map(str, self.game.code))
 
             header_text = "Oops!"
             message_text = f"You lost, the code was: {code_str}"
+            hightlight = 4
 
         footer_text = "Press any key to restart (q to quit)"
 
@@ -360,7 +362,10 @@ class MasterMindUI:
 
         self.hint_window.addstr(message_text_beg_y, message_text_beg_x, message_text)
         self.hint_window.chgat(
-            4, message_text_beg_x + len(message_text) - 4, 4, curses.A_BOLD
+            4,
+            message_text_beg_x + len(message_text) - hightlight,
+            hightlight,
+            curses.A_BOLD,
         )
 
         self.board_window.refresh()
@@ -425,4 +430,19 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    curses.wrapper(main)
+    try:
+        stdscr = curses.initscr()
+
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+
+        main(stdscr)
+    finally:
+        if "stdscr" in locals():
+            stdscr.keypad(False)
+
+        curses.echo()
+        curses.nocbreak()
+        curses.curs_set(1)
+        curses.endwin()
