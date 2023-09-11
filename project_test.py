@@ -7,6 +7,10 @@ import os
 import textwrap
 from tabulate import tabulate
 
+POSSIBLE_DIGITS = range(1, 7)
+MAX_ROUNDS = 10
+NUM_PEGS = 4
+
 
 class InvalidCode(ValueError):
     pass
@@ -20,17 +24,95 @@ class GameOver(Exception):
     pass
 
 
-class Board:
-    NUMBERS = range(1, 7)
-    ROUNDS = 10
-    PEGS = 4
-
-    def __init__(self, stdscr, cheats=False) -> None:
-        self.rounds = tuple(f"{r:02}" for r in range(1, self.ROUNDS + 1))
+class MasterMindGame:
+    def __init__(self, cheats=False):
+        self.rounds = [f"{r:02}" for r in range(1, MAX_ROUNDS + 1)]
         self.cheats = cheats
+        self.reset()
 
-        self.stdscr: curses.window = stdscr
+    def reset(self) -> None:
+        self.code = self.generate_code()
+        self.code_pegs = []
+        self.feedback_pegs = []
+        self.current_round = 0
+        self.player_won = False
 
+    def generate_code(self) -> list[int]:
+        """Generate and return the secret code"""
+        return random.sample(POSSIBLE_DIGITS, NUM_PEGS)
+
+    @property
+    def current_guess(self) -> list[int]:
+        return [int(n) for n in self.code_pegs[self.current_round]]
+
+    @current_guess.setter
+    def current_guess(self, guess: list[int]) -> None:
+        self.make_guess(guess)
+
+    def make_guess(self, code) -> None:
+        """Process the player's guess and update the game state"""
+        if len(code) != NUM_PEGS:
+            raise InvalidCode(f"Enter exactly {NUM_PEGS} numbers.")
+
+        for n in code:
+            if n not in POSSIBLE_DIGITS:
+                raise InvalidCode("Use numbers between 1 and 6.")
+
+        if len(set(code)) != NUM_PEGS:
+            raise InvalidCode("Do not repeat numbers.")
+
+        self.code_pegs.append("".join(map(str, code)))
+        self.feedback_pegs.append("".join(self._feedback(code)))
+
+        if code == self.code:
+            self.player_won = True
+            raise GameOver
+
+        elif self.current_round + 1 < MAX_ROUNDS:
+            self.current_round += 1
+
+        else:
+            raise GameOver
+
+    def _feedback(self, code) -> list[str]:
+        pegs = []
+        for i in range(NUM_PEGS):
+            if code[i] == self.code[i]:
+                pegs.append("O")
+            elif code[i] in self.code:
+                pegs.append("X")
+            else:
+                pegs.append("_")
+
+        pegs.sort(key=lambda item: ("O" not in item, "X" not in item, item))
+
+        return pegs
+
+    def get_game_data(self) -> dict:
+        guesses = self.code_pegs + ["...."] * (MAX_ROUNDS - len(self.code_pegs))
+        pegs = self.feedback_pegs + ["...."] * (MAX_ROUNDS - len(self.feedback_pegs))
+
+        return {
+            "": self.rounds,
+            "Code": guesses,
+            "Pegs": pegs,
+        }
+
+    def reveal_code(self) -> None:
+        tmpfile = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
+
+        with open(tmpfile, "w") as f:
+            f.write("".join(map(str, self.code)) + "\n")
+
+
+class MasterMindUI:
+    def __init__(self, stdscr: curses.window, game: MasterMindGame):
+        self.stdscr = stdscr
+        self.game = game
+        self.init_ui()
+
+    def init_ui(self):
+        """Initialize the UI components (windows, coordinate, etc.)"""
         self.MAIN_Y, self.MAIN_X = (curses.LINES - 1, curses.COLS)
         self.MAIN_BEG_Y = (curses.LINES - self.MAIN_Y) // 2
         self.MAIN_BEG_X = (curses.COLS - self.MAIN_X) // 2
@@ -71,126 +153,7 @@ class Board:
 
         curses.curs_set(0)
 
-    @property
-    def num_pegs(self):
-        return NUM_PEGS
-
-    def reset(self) -> None:
-        self._code = random.sample(self.NUMBERS, self.PEGS)
-        self.code_pegs = []
-        self.feedback_pegs = []
-        self.current_round = 0
-        self.player_won = False
-
-        if self.cheats:
-            self.reveal_code()
-
-    @property
-    def code(self) -> list[int]:
-        return self._code
-
-    @code.setter
-    def code(self, code) -> None:
-        self.validate_code(code)
-
-        self._code = code
-
-
-    def validate_code(self, code: list[int]) -> None:
-        if len(code) != self.PEGS:
-            raise InvalidCode(f"Enter exactly {self.PEGS} numbers.")
-
-        for n in code:
-            if n not in self.NUMBERS:
-                raise InvalidCode("Use numbers between 1 and 6.")
-
-        if len(set(code)) != self.PEGS:
-            raise InvalidCode("Do not repeat numbers.")
-
-    @property
-    def current_guess(self) -> list[int]:
-        return [int(n) for n in self.code_pegs[self.current_round]]
-
-    @current_guess.setter
-    def current_guess(self, guess: list[int]) -> None:
-        self.validate_code(guess)
-        self.code_pegs.append("".join(map(str, guess)))
-        self.feedback_pegs.append("".join(self.feedback(guess)))
-
-        if guess == self._code:
-            self.player_won = True
-            raise GameOver
-
-        elif self.current_round < self.ROUNDS - 1:
-            self.current_round += 1
-
-        else:
-            raise GameOver
-
-    def feedback(self, code: list[int]) -> list[str]:
-        self.validate_code(code)
-
-        feedback_pegs = []
-        try:
-            for i in range(self.PEGS):
-                if code[i] == self._code[i]:
-                    feedback_pegs.append("O")
-                elif code[i] in self._code:
-                    feedback_pegs.append("X")
-                else:
-                    feedback_pegs.append("_")
-        finally:
-            feedback_pegs.sort(
-                key=lambda item: ("O" not in item, "X" not in item, item)
-            )
-
-        return feedback_pegs
-
-    @property
-    def data(self) -> dict:
-        guesses = self.code_pegs + ["...."] * (self.ROUNDS - len(self.code_pegs))
-        feedbacks = self.feedback_pegs + ["...."] * (
-            self.ROUNDS - len(self.feedback_pegs)
-        )
-
-        return {
-            "": self.rounds,
-            "Code": guesses,
-            "Pegs": feedbacks,
-        }
-
-    def draw(self) -> str:
-        return tabulate(
-            self.data,
-            headers="keys",
-            tablefmt="pretty",
-            numalign="center",
-        )
-
-    def reveal_code(self) -> None:
-        tmpfile = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
-
-        with open(tmpfile, "w") as f:
-            f.write("".join(map(str, self._code)) + "\n")
-
-    def loop(self) -> None:
-        self.init_interface()
-
-        while True:
-            self.reset()
-
-            while True:
-                try:
-                    self.show_board()
-                    self.current_guess = self.handel_guess_input()
-                except InvalidCode as e:
-                    self.show_hint(e)
-                except Help:
-                    self.show_help()
-                except GameOver:
-                    self.game_over()
-
-    def init_interface(self) -> None:
+    def show_static_ui(self) -> None:
         title_text = "+MasterMind+"
         keys_text = "0-9 Guess. Enter Confirm. H Toggle help. Q quit."
 
@@ -210,21 +173,22 @@ class Board:
 
         self.stdscr.refresh()
 
-    def show_board(self) -> None:
+    def show_board(self):
         self.hint_window.erase()
         self.board_window.erase()
         self.input_window.erase()
 
-        self.board_window.addstr(self.draw())
+        self.board_window.addstr(self._draw_board())
         self.input_window.noutrefresh()
         self.input_window.mvwin(
-            self.BOARD_BEG_Y + (self.current_round) + 3, self.BOARD_BEG_X + 7
+            self.BOARD_BEG_Y + (self.game.current_round) + 3, self.BOARD_BEG_X + 7
         )
 
         self.hint_window.noutrefresh()
         self.board_window.refresh()
 
-    def handel_guess_input(self) -> list[int]:
+    def handle_user_input(self):
+        """Handle user input (guesses, commands, etc.)"""
         guess = []
         while True:
             key = self.input_window.getkey()
@@ -249,7 +213,8 @@ class Board:
             else:
                 continue
 
-    def show_hint(self, message: ValueError) -> None:
+    def show_hint(self, message):
+        """Display a hint message on the screen"""
         hint_text = f"Hint: {str(message)}"
         hint_text_beg_y = (self.HINT_Y - 1) // 2
         hint_text_beg_x = (self.HINT_X - len(hint_text)) // 2
@@ -263,7 +228,8 @@ class Board:
 
         self.hint_window.getkey()
 
-    def show_help(self) -> None:
+    def show_help(self):
+        """Display the help screen"""
         help_text = textwrap.dedent(
             """\
     +-------------------HELP-------------------+
@@ -340,7 +306,7 @@ class Board:
             elif key == "KEY_NPAGE":
                 curser_position = CURSER_POSITION_MAX
 
-            elif key.upper() in ("Q", "H"):
+            else:
                 self.help_pad.erase()
                 self.help_pad.refresh(
                     0,
@@ -352,9 +318,6 @@ class Board:
                 )
                 break
 
-            else:
-                continue
-
             self.help_pad.refresh(
                 curser_position,
                 0,
@@ -364,14 +327,15 @@ class Board:
                 self.HELP_BEG_X + self.HELP_X,
             )
 
-    def game_over(self) -> None:
-        if self.player_won:
-            score = "{:02}/{}".format(self.ROUNDS - self.current_round, self.ROUNDS)
+    def show_game_over(self):
+        """Display the game over screen"""
+        if self.game.player_won:
+            score = "{:02}/{}".format(MAX_ROUNDS - self.game.current_round, MAX_ROUNDS)
 
             header_text = "Congratulations!"
             message_text = f"You won, your score is {score}"
         else:
-            code_str = "".join(map(str, self._code))
+            code_str = "".join(map(str, self.game.code))
 
             header_text = "Oops!"
             message_text = f"You lost, the code was: {code_str}"
@@ -390,7 +354,7 @@ class Board:
         self.board_window.erase()
         self.hint_window.erase()
 
-        self.board_window.addstr(self.draw(), curses.A_DIM)
+        self.board_window.addstr(self._draw_board(), curses.A_DIM)
 
         self.hint_window.border("|", "|", "-", "-", "+", "+", "+", "+")
 
@@ -417,24 +381,52 @@ class Board:
         self.stdscr.addstr(footer_text_beg_y, footer_text_beg_x, " " * len(footer_text))
         self.stdscr.refresh()
 
-        self.reset()
+    def _draw_board(self) -> str:
+        return tabulate(
+            self.game.get_game_data(),
+            headers="keys",
+            tablefmt="pretty",
+            numalign="center",
+        )
+
+    def run(self):
+        self.show_static_ui()
+
+        while True:
+            self.game.reset()
+
+            if self.game.cheats:
+                self.game.reveal_code()
+
+            while True:
+                try:
+                    self.show_board()
+                    self.game.current_guess = self.handle_user_input()
+                except InvalidCode as e:
+                    self.show_hint(e)
+                except Help:
+                    self.show_help()
+                except GameOver:
+                    self.show_game_over()
+                    break
 
 
-def main(stdscr) -> None:
-    board = Board(stdscr, cheats=args.cheats)
-    board.loop()
+def main(stdscr):
+    game = MasterMindGame(cheats=args.cheats)
+    ui = MasterMindUI(stdscr, game)
+    ui.run()
 
 
 if __name__ == "__main__":
-    _parse = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Classic board-game MasterMind in the terminal."
     )
-    _parse.add_argument(
+    parser.add_argument(
         "-c",
         "--cheats",
         help="store game's code in $TMPDIR/mastermind.txt",
         action="store_true",
     )
+    args = parser.parse_args()
 
-    args = _parse.parse_args()
     curses.wrapper(main)
