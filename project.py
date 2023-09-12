@@ -31,14 +31,21 @@ class MasterMindGame:
         self.reset()
 
     def reset(self) -> None:
-        self.code = self.generate_code()
+        self._code = random.sample(POSSIBLE_DIGITS, NUM_PEGS)
         self.code_pegs = []
         self.feedback_pegs = []
         self.current_round = 0
         self.player_won = False
 
-    def generate_code(self) -> list[int]:
-        return random.sample(POSSIBLE_DIGITS, NUM_PEGS)
+    @property
+    def code(self):
+        return self._code
+
+    @code.setter
+    def code(self, code):
+        self._validate_code(code)
+
+        self._code = code
 
     @property
     def current_guess(self) -> list[int]:
@@ -48,16 +55,8 @@ class MasterMindGame:
     def current_guess(self, guess: list[int]) -> None:
         self.make_guess(guess)
 
-    def make_guess(self, code) -> None:
-        if len(code) != NUM_PEGS:
-            raise InvalidCode(f"Enter exactly {NUM_PEGS} numbers.")
-
-        for n in code:
-            if n not in POSSIBLE_DIGITS:
-                raise InvalidCode("Use numbers between 1 and 6.")
-
-        if len(set(code)) != NUM_PEGS:
-            raise InvalidCode("Do not repeat numbers.")
+    def make_guess(self, code: list[int]) -> None:
+        self._validate_code(code)
 
         self.code_pegs.append("".join(map(str, code)))
         self.feedback_pegs.append("".join(self._feedback(code)))
@@ -72,7 +71,20 @@ class MasterMindGame:
         else:
             raise GameOver
 
+    def _validate_code(self, code):
+        if len(code) != NUM_PEGS:
+            raise InvalidCode(f"Enter exactly {NUM_PEGS} numbers.")
+
+        for n in code:
+            if n not in POSSIBLE_DIGITS:
+                raise InvalidCode("Use numbers between 1 and 6.")
+
+        if len(set(code)) != NUM_PEGS:
+            raise InvalidCode("Do not repeat numbers.")
+
     def _feedback(self, code) -> list[str]:
+        self._validate_code(code)
+
         pegs = []
         for i in range(NUM_PEGS):
             if code[i] == self.code[i]:
