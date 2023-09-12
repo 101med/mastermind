@@ -28,7 +28,7 @@ mastermind/
 
 `mastermind.py` and `ui.py` work together to accomplish the project's goal. Here's a brief overview of what each of these files does:
 
-### `mastermind.py`
+#### `mastermind.py`
 
 - The main entry point of the game.
 - Defines the `main` function, which controls the game loop.
@@ -36,7 +36,7 @@ mastermind/
 - Validates the code entered by the player, provides feedback, and manages win or loss conditions.
 - Calls functions to reveal the code if cheats are enabled.
 
-### `ui.py`
+#### `ui.py`
 
 - Contains the `GameUI` class, responsible for creating and managing the user interface using `curses`.
 - Sets up windows for different parts of the game, such as the main board, input, hint, help screens and yx coordinates that helps center theses elements.
