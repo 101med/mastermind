@@ -1,3 +1,0 @@
-POSSIBLE_DIGITS = range(1, 7)
-MAX_ROUNDS = 10
-NUM_PEGS = 4
