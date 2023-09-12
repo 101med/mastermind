@@ -32,8 +32,8 @@ class Pad(Screen):
 
 
 class BoardWindow(Window):
-    def __init__(self, stdscr: curses.window, lines: int, cols: int) -> None:
-        super().__init__(stdscr, lines, cols)
+    def __init__(self, stdscr: curses.window, lines: int, cols: int, y=None, x=None) -> None:
+        super().__init__(stdscr, lines, cols, y, x)
 
     def show_board(self) -> None:
         ...
@@ -43,16 +43,16 @@ class BoardWindow(Window):
 
 
 class InputWindow(Window):
-    def __init__(self, stdscr: curses.window, lines: int, cols: int) -> None:
-        super().__init__(stdscr, lines, cols)
+    def __init__(self, stdscr: curses.window, lines: int, cols: int, y=None, x=None) -> None:
+        super().__init__(stdscr, lines, cols, y,x)
 
     def handel_input(self) -> list[int]:
         ...
 
 
 class HintWindow(Window):
-    def __init__(self, stdscr: curses.window, lines: int, cols: int) -> None:
-        super().__init__(stdscr, lines, cols)
+    def __init__(self, stdscr: curses.window, lines: int, cols: int, y=None, x=None) -> None:
+        super().__init__(stdscr, lines, cols, y,x)
 
     def show_message(self, message: ValueError) -> None:
         ...
@@ -74,15 +74,7 @@ def main(stdscr):
     BOARD = BoardWindow(stdscr, lines=15, cols=21)
     HINT = HintWindow(stdscr, lines=7, cols=40)
     HELP = HelpPad(stdscr, lines=40, cols=46)
-    INPUT = InputWindow(stdscr, lines=1, cols=5)
-    MAIN.window.border(*MAIN.border)
-    BOARD.window.border(*BOARD.border)
-    HINT.window.border(*MAIN.border)
-    INPUT.window.bkgd(curses.A_REVERSE)
-    MAIN.window.refresh()
-    BOARD.window.refresh()
-    HINT.window.refresh()
-    INPUT.window.getch()
+    INPUT = InputWindow(stdscr, lines=1, cols=5, y=1, x=1)
 
 
 if __name__ == "__main__":
