@@ -13,8 +13,8 @@ mastermind/
 ├── constants.py
 ├── exceptions.py
 ├── ui.py
-├── mastermind.py
-├── test_mastermind.py
+├── project.py
+├── test_project.py
 └── README.md
 ```
 
@@ -22,13 +22,13 @@ mastermind/
 - `constants.py`: Game-specific constants.
 - `exceptions.py`: Custom exceptions used in the game.
 - `ui.py`: User interface components for the game.
-- `mastermind.py`: Core logic and game implementation.
-- `test_mastermind.py`: Unit tests for game functions.
+- `project.py`: Core logic and game implementation.
+- `test_project.py`: Unit tests for game functions.
 - `README.md`: You are reading this file!
 
-`mastermind.py` and `ui.py` work together to accomplish the project's goal. Here's a brief overview of what each of these files does:
+`project.py` and `ui.py` work together to accomplish the project's goal. Here's a brief overview of what each of these files does:
 
-#### `mastermind.py`
+#### `project.py`
 
 - The main entry point of the game.
 - Defines the `main` function, which controls the game loop.
@@ -55,13 +55,13 @@ mastermind/
    - Using Python:
 
      ```bash
-     $ python mastermind.py
+     $ python project.py
      ```
 
    - Or, make the script executable and run it directly:
 
      ```bash
-     $ ./mastermind.py
+     $ ./project.py
      ```
 
 - **Command-Line Flags**: The game offers two command-line flags for customization:
@@ -69,11 +69,11 @@ mastermind/
    - `-c` or `--cheats`.
 
      ```bash
-     $ python mastermind.py -h
+     $ python project.py -h
      ```
 
      ```plaintext
-     usage: mastermind.py [-h] [-c]
+     usage: project.py [-h] [-c]
 
      Classic board-game MasterMind in the terminal.
 
