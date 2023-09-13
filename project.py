@@ -10,6 +10,17 @@ from ui import GameUI
 
 
 def main(stdscr):
+    """
+    Main function to run the game.
+
+    This function initializes the game, manages rounds, and handles player input.
+    
+    Parameters:
+        stdscr (curses.window): The main curses window for the game.
+
+    Returns:
+        None.
+    """
     ui = GameUI(stdscr)
     ui.show_static_menu()
 
@@ -57,6 +68,21 @@ def main(stdscr):
 
 
 def validate_code(code: list[int]) -> None:
+    """
+    Validates a user-provided code for the Mastermind game.
+
+    Checks if the code has the correct length, contains valid digits,
+    and does not repeat any digits.
+
+    Parameters:
+        code (list[int]): The user-provided code to validate.
+
+    Raises:
+        InvalidCode: If the code is invalid with an appropriate error message.
+
+    Returns:
+        None.
+    """
     if len(code) != NUM_PEGS:
         raise InvalidCode(f"Enter exactly {NUM_PEGS} numbers.")
 
@@ -69,6 +95,20 @@ def validate_code(code: list[int]) -> None:
 
 
 def feedback(code: list[int], guess: list[int]) -> list[str]:
+    """
+    Calculates feedback pegs based on a guess and the secret code.
+
+    For each digit in the guess, it determines if it's an "O" (correct digit
+    in the correct position), "X" (correct digit in the wrong position), or "_"
+    (digit not in the code).
+
+    Parameters:
+        code (list[int]): The secret code.
+        guess (list[int]): The player's guess.
+
+    Returns:
+        list[str]: A list of feedback pegs.
+    """
     pegs = []
     for i in range(NUM_PEGS):
         if guess[i] == code[i]:
@@ -84,6 +124,17 @@ def feedback(code: list[int], guess: list[int]) -> list[str]:
 
 
 def reveal_code(code: list[int]) -> None:
+    """
+    Reveals and stores the game's secret code.
+
+    The secret code is stored in a temporary file for cheating.
+
+    Parameters:
+        code (list[int]): The secret code to reveal.
+
+    Returns:
+        None.
+    """
     tmpfile = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mastermind_code.txt")
 
     with open(tmpfile, "w") as f:

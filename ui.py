@@ -7,10 +7,25 @@ from tabulate import tabulate
 
 class GameUI:
     def __init__(self, stdscr: curses.window) -> None:
+        """
+        Initializes a GameUI instance.
+
+        Parameters:
+            stdscr (curses.window): The main curses window for the game.
+
+        Returns:
+            None.
+        """
         self.stdscr = stdscr
         self._init_ui()
 
     def _init_ui(self) -> None:
+        """
+        Initializes the game user interface, setting up windows and their positions.
+
+        Returns:
+            None.
+        """
         curses.curs_set(0)
 
         self.MAIN_Y, self.MAIN_X = (curses.LINES - 1, curses.COLS)
@@ -55,6 +70,12 @@ class GameUI:
         self.help_pad.keypad(True)
 
     def show_static_menu(self) -> None:
+        """
+        Displays the static menu with the game title and key hints.
+
+        Returns:
+            None.
+        """
         title = "+MasterMind+"
         keys_help = "0-9 Guess. Enter Confirm. H Toggle help. Q quit."
 
@@ -77,6 +98,17 @@ class GameUI:
     def show_board(
         self, guess_pegs: list[str], feedback_pegs: list[str], current_round: int
     ) -> None:
+        """
+        Displays the game board with guess and feedback pegs.
+
+        Parameters:
+            guess_pegs (list[str]): List of guess pegs for each round.
+            feedback_pegs (list[str]): List of feedback pegs for each round.
+            current_round (int): The current round number.
+
+        Returns:
+            None.
+        """
         self.hint_window.erase()
         self.board_window.erase()
         self.input_window.erase()
@@ -91,6 +123,15 @@ class GameUI:
         self.board_window.refresh()
 
     def show_hint(self, message: ValueError) -> None:
+        """
+        Displays a hint message to the user.
+
+        Parameters:
+            message (ValueError): The hint message to display.
+
+        Returns:
+            None.
+        """
         hint_message = f"Hint: {str(message)}"
         hint_message_beg_y = (self.HINT_Y - 1) // 2
         hint_message_beg_x = (self.HINT_X - len(hint_message)) // 2
@@ -104,7 +145,13 @@ class GameUI:
 
         self.hint_window.getkey()
 
-    def show_help(self):
+    def show_help(self) -> None:
+        """
+        Displays the game help menu.
+
+        Returns:
+            None.
+        """
         help_content = textwrap.dedent(
             """\
                 +-------------------HELP-------------------+
@@ -185,6 +232,15 @@ class GameUI:
             self._refresh_help_pad(curser_position)
 
     def _refresh_help_pad(self, position: int = 0) -> None:
+        """
+        Refreshes the help menu pad, allowing scrolling through the help content.
+
+        Parameters:
+            position (int, optional): The position within the help content to scroll to. Default is 0.
+
+        Returns:
+            None.
+        """
         self.help_pad.refresh(
             position,
             0,
@@ -202,6 +258,19 @@ class GameUI:
         current_round: int,
         player_won: bool,
     ) -> None:
+        """
+        Displays the game over screen, indicating whether the player won or lost.
+
+        Parameters:
+            code (list[int]): The secret code that the player was trying to guess.
+            guess_pegs (list[str]): List of guess pegs for each round.
+            feedback_pegs (list[str]): List of feedback pegs for each round.
+            current_round (int): The current round number.
+            player_won (bool): True if the player won, False if they lost.
+
+        Returns:
+            None.
+        """
         if player_won:
             score = "{:02}/{}".format(MAX_ROUNDS - current_round, MAX_ROUNDS)
 
@@ -256,6 +325,12 @@ class GameUI:
         self.stdscr.refresh()
 
     def handle_user_input(self) -> list[int]:
+        """
+        Handles user input for entering guesses and togging help menu or exiting the game
+
+        Returns:
+            list[int]: A list of integers representing the user's guess.
+        """
         guess = []
         while True:
             key = self.input_window.getkey()
@@ -282,6 +357,16 @@ class GameUI:
 
     @staticmethod
     def board(guess_pegs: list[str], feedback_pegs: list[str]) -> str:
+        """
+        Generates a game board as a pretty table using the tabulate library.
+
+        Parameters:
+            guess_pegs (list[str]): List of guess pegs for each round.
+            feedback_pegs (list[str]): List of feedback pegs for each round.
+
+        Returns:
+            str: A string representation of the game board.
+        """
         return tabulate(
             {
                 "": [f"{r:02}" for r in range(1, MAX_ROUNDS + 1)],
